@@ -345,8 +345,10 @@ pub async fn advanced_engine_apply_optimize_now(
     app: AppHandle,
     request: Option<AdvancedApplyRequest>,
 ) -> Result<AdvancedApplyResult, String> {
+    // enforce_safe_test_mode must stay `true` here: this is the "Otimizar Agora" one-click
+    // path and it must never be able to bypass the global HERMES_SAFE_TEST_MODE build flag.
     tauri::async_runtime::spawn_blocking(move || {
-        advanced_engine_apply_blocking(app, request, false)
+        advanced_engine_apply_blocking(app, request, true)
     })
     .await
     .map_err(|err| format!("Falha ao otimizar emulador no Otimizar Agora: {err}"))?
@@ -2078,21 +2080,24 @@ fn set_fate_trigger_cpu_priority_high_plan(state: &RawAdvancedState) -> Advanced
                 display_optional(state.fate_trigger_cpu_priority),
                 display_optional(state.fate_trigger_shipping_cpu_priority)
             ),
-            "Definir CpuPriorityClass como 3 para Fate Trigger",
+            "Definir CpuPriorityClass como 5 (High) para Fate Trigger",
             "PowerShell New-ItemProperty em HKLM Image File Execution Options\\FateTrigger*\\PerfOptions",
         ),
         operations: vec![
+            // CpuPriorityClass scale for IFEO\PerfOptions: 1=Low, 2=Below Normal, 3=Normal,
+            // 4=Above Normal, 5=High, 6=Realtime. This action promises "High" priority, so it
+            // must write 5 - writing 3 (Normal) silently applied no boost at all.
             registry_dword(
                 "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\FateTrigger.exe\\PerfOptions",
                 "CpuPriorityClass",
-                3,
+                5,
                 state.fate_trigger_cpu_priority,
                 RestoreRollbackActionType::RestoreRegistryValue,
             ),
             registry_dword(
                 "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\FateTrigger-Win64-Shipping.exe\\PerfOptions",
                 "CpuPriorityClass",
-                3,
+                5,
                 state.fate_trigger_shipping_cpu_priority,
                 RestoreRollbackActionType::RestoreRegistryValue,
             ),

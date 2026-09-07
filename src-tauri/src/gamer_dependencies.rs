@@ -519,6 +519,16 @@ fn install_package_from_cache(
     let install_args = install_args_for_package(package);
     let command_preview = format!("{installer_file_name} {}", install_args.join(" "));
 
+    if !is_allowed_gamer_dependency_id(&package.id) {
+        return install_action(
+            package,
+            installer_file_name,
+            GamerDependencyInstallActionStatus::Blocked,
+            "Pacote fora da allowlist de dependencias gamer (somente VC++ Redistributable e DirectX End-User Runtime).".to_string(),
+            command_preview,
+        );
+    }
+
     let verification_item = verification
         .packages
         .iter()
@@ -778,11 +788,7 @@ fn download_package(
     let publisher_matches = probe
         .signature_subject
         .as_ref()
-        .map(|subject| {
-            subject
-                .to_ascii_lowercase()
-                .contains(&package.required_publisher.to_ascii_lowercase())
-        })
+        .map(|subject| subject_confirms_microsoft(subject))
         .unwrap_or(false);
     if !publisher_matches {
         let _ = fs::remove_file(&temp_path);
@@ -928,11 +934,10 @@ fn audit_manifest_package(
         .as_deref()
         .map(|value| value.eq_ignore_ascii_case("Valid"))
         .unwrap_or(false);
-    let publisher_matches = probe.signature_subject.as_ref().map(|subject| {
-        subject
-            .to_ascii_lowercase()
-            .contains(&package.required_publisher.to_ascii_lowercase())
-    });
+    let publisher_matches = probe
+        .signature_subject
+        .as_ref()
+        .map(|subject| subject_confirms_microsoft(subject));
     let sha256 = probe.sha256.clone();
     let manifest_hint = sha256
         .as_ref()
@@ -974,13 +979,10 @@ fn manifest_audit_item(
     probe: Option<FileSecurityProbe>,
     manifest_hint: Option<String>,
 ) -> GamerDependencyManifestAuditItem {
-    let publisher_matches = probe.as_ref().and_then(|probe| {
-        probe.signature_subject.as_ref().map(|subject| {
-            subject
-                .to_ascii_lowercase()
-                .contains(&package.required_publisher.to_ascii_lowercase())
-        })
-    });
+    let publisher_matches = probe
+        .as_ref()
+        .and_then(|probe| probe.signature_subject.as_ref())
+        .map(|subject| subject_confirms_microsoft(subject));
 
     GamerDependencyManifestAuditItem {
         package_id: package.id.clone(),
@@ -1007,6 +1009,12 @@ fn verify_package(
     package: &GamerDependencyVerifyPackage,
 ) -> GamerDependencyVerificationItem {
     let mut blocked_reasons = Vec::new();
+    if !is_allowed_gamer_dependency_id(&package.id) {
+        blocked_reasons.push(
+            "Pacote fora da allowlist de dependencias gamer (somente VC++ Redistributable e DirectX End-User Runtime)."
+                .to_string(),
+        );
+    }
 
     let installer_file_name = match sanitize_installer_file_name(&package.installer_file_name) {
         Ok(file_name) => file_name,
@@ -1116,11 +1124,10 @@ fn verify_package(
         blocked_reasons.push("Assinatura Authenticode ainda nao esta valida.".to_string());
     }
 
-    let publisher_matches = probe.signature_subject.as_ref().map(|subject| {
-        subject
-            .to_ascii_lowercase()
-            .contains(&package.required_publisher.to_ascii_lowercase())
-    });
+    let publisher_matches = probe
+        .signature_subject
+        .as_ref()
+        .map(|subject| subject_confirms_microsoft(subject));
     if publisher_matches != Some(true) {
         blocked_reasons.push("Assinatura nao confirma Microsoft Corporation.".to_string());
     }
@@ -1465,6 +1472,30 @@ fn open_directory(path: &Path) -> Result<(), String> {
         .spawn()
         .map_err(|error| format!("Nao foi possivel abrir cache de instaladores: {error}"))?;
     Ok(())
+}
+
+/// Security-critical publisher check for gamer-dependency installers (VC++ Redistributable,
+/// DirectX runtime), which only ever come from Microsoft. This deliberately ignores
+/// `package.required_publisher` (caller/frontend-supplied - never trust it for the actual
+/// gate) and parses the certificate subject's `O=` (Organization) field for an exact,
+/// case-insensitive match, instead of a raw substring search across the whole subject string
+/// (which a subject like "O=Not Microsoft Corporation Reseller LLC" would have passed).
+fn subject_confirms_microsoft(subject: &str) -> bool {
+    subject.split(',').any(|part| {
+        part.trim()
+            .strip_prefix("O=")
+            .map(|organization| organization.trim().eq_ignore_ascii_case("Microsoft Corporation"))
+            .unwrap_or(false)
+    })
+}
+
+/// Structural allowlist for what this engine is allowed to install, independent of whatever
+/// package list the frontend sends. Per project policy, "gamer dependencies" means only the
+/// VC++ Redistributables and the DirectX End-User Runtime - never Visual Studio Build Tools,
+/// the VS Installer, Windows SDK, or Windows App Runtime, even though Microsoft signs those
+/// too (so the URL+hash+signature checks alone would not stop them).
+fn is_allowed_gamer_dependency_id(id: &str) -> bool {
+    id.starts_with("vc-redist-") || id == "directx-end-user-runtime"
 }
 
 fn validate_official_download_url(url: &str) -> Result<(), String> {

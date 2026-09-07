@@ -191,6 +191,16 @@ fn profiles_apply_blocking(
     let mut applied_actions = Vec::new();
     let mut failed = false;
     let conflict_warnings = validate_profile_conflicts(&profile);
+    if !dry_run && !conflict_warnings.is_empty() {
+        // validate_profile_conflicts() itself says these warnings mean the profile "deve ser
+        // bloqueada em revisao" - it was only ever returned for display, never enforced. Make
+        // that literal: refuse to apply for real while the profile definition has a hard
+        // conflict (e.g. High Performance + Power Saver bundled together).
+        return Err(format!(
+            "Perfil bloqueado por conflito de configuracao: {}",
+            conflict_warnings.join(" ")
+        ));
+    }
     let recommended_profile_persisted =
         persist_recommended_profile(&app, &profile, dry_run).is_ok();
 

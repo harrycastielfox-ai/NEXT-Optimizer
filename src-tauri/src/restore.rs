@@ -1632,6 +1632,46 @@ fn allowed_clean_roots() -> Vec<String> {
         roots.push(normalize_path_text(
             local.join("Microsoft\\Windows\\Explorer"),
         ));
+        // Keep this list identical to clean.rs's allowed_clean_roots(): anything the Clean
+        // Engine can quarantine must also be restorable here, or "rollback disponivel" is
+        // silently false for that category.
+        roots.push(normalize_path_text(local.join(
+            "Packages\\Microsoft.WindowsStore_8wekyb3d8bbwe\\LocalCache",
+        )));
+        roots.push(normalize_path_text(
+            local.join("Packages\\Microsoft.WindowsStore_8wekyb3d8bbwe\\AC\\Temp"),
+        ));
+        roots.push(normalize_path_text(local.join("NVIDIA\\DXCache")));
+        roots.push(normalize_path_text(local.join("NVIDIA\\GLCache")));
+        roots.push(normalize_path_text(local.join("AMD\\DxCache")));
+        roots.push(normalize_path_text(local.join("AMD\\GLCache")));
+        roots.push(normalize_path_text(local.join("AMD\\VkCache")));
+        roots.push(normalize_path_text(
+            local.join("EpicGamesLauncher\\Saved\\webcache"),
+        ));
+        roots.push(normalize_path_text(
+            local.join("EpicGamesLauncher\\Saved\\webcache_4147"),
+        ));
+        roots.push(normalize_path_text(
+            local.join("EpicGamesLauncher\\Saved\\webcache_4430"),
+        ));
+        roots.push(normalize_path_text(local.join("Battle.net\\Cache")));
+        roots.push(normalize_path_text(local.join("Discord\\Cache")));
+        roots.push(normalize_path_text(local.join("Discord\\Code Cache")));
+        roots.push(normalize_path_text(local.join("Discord\\GPUCache")));
+    }
+    if let Ok(app_data) = std::env::var("APPDATA") {
+        let roaming = Path::new(&app_data);
+        roots.push(normalize_path_text(roaming.join("obs-studio\\cache")));
+    }
+    for key in ["PROGRAMFILES(X86)", "PROGRAMFILES"] {
+        if let Ok(program_files) = std::env::var(key) {
+            let steam = Path::new(&program_files).join("Steam");
+            roots.push(normalize_path_text(steam.join("steamapps\\downloading")));
+            roots.push(normalize_path_text(steam.join("steamapps\\temp")));
+            roots.push(normalize_path_text(steam.join("appcache\\httpcache")));
+            roots.push(normalize_path_text(steam.join("depotcache")));
+        }
     }
 
     roots

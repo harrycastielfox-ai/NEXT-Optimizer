@@ -227,7 +227,9 @@ pub async fn clean_engine_apply_optimize_now(
     app: AppHandle,
     request: Option<CleanApplyRequest>,
 ) -> Result<CleanApplyResult, String> {
-    tauri::async_runtime::spawn_blocking(move || clean_engine_apply_blocking(app, request, false))
+    // enforce_safe_test_mode must stay `true` here: this is the "Otimizar Agora" one-click
+    // path and it must never be able to bypass the global HERMES_SAFE_TEST_MODE build flag.
+    tauri::async_runtime::spawn_blocking(move || clean_engine_apply_blocking(app, request, true))
         .await
         .map_err(|err| format!("Falha ao executar limpeza do Otimizar Agora: {err}"))?
 }

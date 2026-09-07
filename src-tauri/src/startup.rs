@@ -270,6 +270,14 @@ pub(crate) fn startup_engine_apply_blocking(
     if selected_items.is_empty() {
         return Err("Nenhum item seguro de inicializacao foi selecionado.".to_string());
     }
+    // Steam/Discord/Razer-style background launchers may only be disabled when the caller
+    // picked specific item ids (a deliberate, itemized, confirmed choice) - never as part of
+    // the "no item_ids given, disable everything High impact" default sweep.
+    let explicit_selection = request
+        .item_ids
+        .as_ref()
+        .map(|ids| !ids.is_empty())
+        .unwrap_or(false);
 
     let snapshot = restore::restore_create_snapshot(
         app.clone(),
@@ -304,7 +312,13 @@ pub(crate) fn startup_engine_apply_blocking(
             })
             .collect::<Vec<_>>()
     } else {
-        apply_startup_items(&app, &request.action, &selected_items, &snapshot.id)?
+        apply_startup_items(
+            &app,
+            &request.action,
+            &selected_items,
+            &snapshot.id,
+            explicit_selection,
+        )?
     };
 
     let failed_items = actions
@@ -678,10 +692,11 @@ fn apply_startup_items(
     action: &StartupApplyAction,
     items: &[StartupItem],
     snapshot_id: &str,
+    explicit_selection: bool,
 ) -> Result<Vec<StartupApplyActionResult>, String> {
     let mut results = Vec::new();
     for item in items {
-        let result = apply_startup_item(app, action, item);
+        let result = apply_startup_item(app, action, item, explicit_selection);
         append_startup_event(
             app,
             if matches!(result.status, StartupApplyActionStatus::Failed) {
@@ -702,6 +717,7 @@ fn apply_startup_item(
     app: &AppHandle,
     action: &StartupApplyAction,
     item: &StartupItem,
+    explicit_selection: bool,
 ) -> StartupApplyActionResult {
     let Some(path) = item.registry_path.as_deref() else {
         return startup_result(
@@ -723,6 +739,22 @@ fn apply_startup_item(
             item,
             StartupApplyActionStatus::Skipped,
             "Item fora da allowlist HKCU Run/RunOnce ou exige administrador.",
+        );
+    }
+
+    if is_hard_protected_startup_vendor(&item.name, &item.command) {
+        return startup_result(
+            item,
+            StartupApplyActionStatus::Skipped,
+            "Item protegido (anti-cheat, antivirus ou driver de GPU/audio) nunca e desativado pelo NEX.",
+        );
+    }
+
+    if is_soft_protected_startup_vendor(&item.name, &item.command) && !explicit_selection {
+        return startup_result(
+            item,
+            StartupApplyActionStatus::Skipped,
+            "Item de segundo plano (Steam, Discord, Razer, Epic, Battle.net ou Adobe) so e desativado quando selecionado manualmente e confirmado, nunca no pacote automatico.",
         );
     }
 
@@ -1060,20 +1092,18 @@ fn has_fallback_warning(warnings: &[String]) -> bool {
 fn classify_impact(name: &str, command: &str) -> StartupImpact {
     let haystack = format!("{name} {command}").to_lowercase();
 
-    if contains_any(
-        &haystack,
-        &[
-            "steam",
-            "discord",
-            "epic",
-            "battle.net",
-            "battlenet",
-            "razer",
-            "adobe",
-            "teams",
-            "launcher",
-        ],
-    ) {
+    if is_hard_protected_startup_vendor(name, command) {
+        // Never advertise anti-cheat/antivirus/GPU-audio vendors as "High impact" candidates -
+        // is_hard_protected_startup_vendor() is also an unconditional block in
+        // apply_startup_item(), this just keeps the UI classification honest.
+        StartupImpact::Low
+    } else if is_soft_protected_startup_vendor(name, command) {
+        // Steam/Discord/Razer/launchers: real high-impact background apps, but never picked
+        // up by the automatic "disable everything High impact" default sweep - they can only
+        // be disabled if the user selects them one by one and confirms
+        // (see apply_startup_item()'s explicit_selection check).
+        StartupImpact::Low
+    } else if contains_any(&haystack, &["teams", "launcher"]) {
         StartupImpact::High
     } else if contains_any(
         &haystack,
@@ -1085,6 +1115,64 @@ fn classify_impact(name: &str, command: &str) -> StartupImpact {
     } else {
         StartupImpact::Low
     }
+}
+
+/// Hard exclusion list for the Startup Engine: anti-cheat services, antivirus vendors, and
+/// GPU/audio vendor helpers must NEVER be disabled by NEX, not even if the user explicitly
+/// selects them by id - unlike is_soft_protected_startup_vendor() below, there is no "safe way"
+/// to offer this, so apply_startup_item() blocks it unconditionally.
+fn is_hard_protected_startup_vendor(name: &str, command: &str) -> bool {
+    let haystack = format!("{name} {command}").to_lowercase();
+    contains_any(
+        &haystack,
+        &[
+            "battleye",
+            "easyanticheat",
+            "easy anti-cheat",
+            "vanguard",
+            "riotclient",
+            "faceit",
+            "nvidia",
+            "geforce",
+            "amd",
+            "radeon",
+            "intel graphics",
+            "realtek",
+            "windows defender",
+            "msmpeng",
+            "norton",
+            "mcafee",
+            "avast",
+            "avg",
+            "kaspersky",
+            "bitdefender",
+            "eset",
+            "malwarebytes",
+        ],
+    )
+}
+
+/// Background launchers/companions (Steam, Discord, Razer/Logitech/Corsair peripheral
+/// software, Epic, Battle.net, Adobe): legitimate to disable at startup - it only stops them
+/// from auto-opening, it does not touch Steam/Discord/the game itself or any driver - but only
+/// when the user picks them individually and confirms, never as part of the automatic "disable
+/// everything High impact" sweep. See apply_startup_item()'s explicit_selection check.
+fn is_soft_protected_startup_vendor(name: &str, command: &str) -> bool {
+    let haystack = format!("{name} {command}").to_lowercase();
+    contains_any(
+        &haystack,
+        &[
+            "steam",
+            "discord",
+            "razer",
+            "logitech",
+            "corsair",
+            "epic",
+            "battle.net",
+            "battlenet",
+            "adobe",
+        ],
+    )
 }
 
 fn contains_any(value: &str, patterns: &[&str]) -> bool {
