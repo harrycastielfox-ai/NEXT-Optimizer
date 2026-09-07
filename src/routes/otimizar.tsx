@@ -15,6 +15,7 @@ import {
   writeExecutionCycleReport,
   writeExecutionReport,
 } from "@/lib/execution-report";
+import { applyAdvancedActions } from "@/lib/advanced";
 import { DNS_PROVIDERS, type DnsProviderId, type QuickPrepareReports } from "@/lib/quick-prepare";
 import { HERMES_SAFE_TEST_MODE } from "@/lib/safe-mode";
 import { readSystemBootContext, type SystemBootContext } from "@/lib/system";
@@ -58,6 +59,10 @@ function OptimizeRoute() {
     null,
   );
   const [dnsProviderId, setDnsProviderId] = useState<DnsProviderId>(DEFAULT_DNS_PROVIDER_ID);
+  const [dnsApplyStatus, setDnsApplyStatus] = useState<"idle" | "working" | "done" | "error">(
+    "idle",
+  );
+  const [dnsApplyMessage, setDnsApplyMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const storedGate = readQuickPrepareGate();
@@ -105,6 +110,40 @@ function OptimizeRoute() {
     setSmartOptimizeRunKey((value) => value + 1);
     setIsSmartOptimizeOpen(true);
   }, [quickPrepareGate]);
+
+  const handleApplyDnsNow = useCallback(async () => {
+    const provider = DNS_PROVIDERS.find((item) => item.id === dnsProviderId);
+    if (!provider) {
+      return;
+    }
+
+    const userConfirmed =
+      HERMES_SAFE_TEST_MODE ||
+      window.confirm(`Aplicar DNS ${provider.label} (${provider.primary}) agora?`);
+    if (!userConfirmed) {
+      return;
+    }
+
+    setDnsApplyStatus("working");
+    setDnsApplyMessage(null);
+
+    try {
+      const result = await applyAdvancedActions({
+        confirmed: !HERMES_SAFE_TEST_MODE && userConfirmed,
+        dryRun: HERMES_SAFE_TEST_MODE,
+        actionIds: [provider.actionId],
+      });
+      setDnsApplyStatus("done");
+      setDnsApplyMessage(
+        result.dryRun
+          ? `Modo teste: DNS ${provider.label} validado, nada foi alterado de verdade.`
+          : (result.appliedActions[0]?.message ?? `DNS ${provider.label} aplicado.`),
+      );
+    } catch (nextError) {
+      setDnsApplyStatus("error");
+      setDnsApplyMessage(nextError instanceof Error ? nextError.message : String(nextError));
+    }
+  }, [dnsProviderId]);
 
   const handleDiagnosticUpdate = useCallback((_report: DiagnosticReport) => {}, []);
 
@@ -216,16 +255,41 @@ function OptimizeRoute() {
           </section>
 
           <section className="rounded-2xl border border-purple-400/20 bg-black/32 p-4 shadow-[0_16px_45px_rgba(168,85,247,0.1)]">
-            <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.28em] text-purple-300">
                   DNS do jogador
                 </p>
                 <h2 className="mt-1 text-lg font-black text-white">Escolha seu provedor DNS</h2>
               </div>
-              <p className="text-xs text-slate-400">A escolha será aplicada na preparação do PC.</p>
+              <div className="ml-auto flex flex-col items-end gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => void handleApplyDnsNow()}
+                  disabled={dnsApplyStatus === "working"}
+                  className={`inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-400 px-5 py-2.5 text-xs font-black uppercase tracking-wide text-slate-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:text-slate-950/70 ${
+                    dnsApplyStatus === "working"
+                      ? "animate-pulse shadow-[0_0_45px_rgba(52,211,153,0.75)]"
+                      : "shadow-[0_14px_32px_rgba(52,211,153,0.35)] disabled:bg-emerald-400/30"
+                  }`}
+                >
+                  {dnsApplyStatus === "working" ? "Aplicando..." : "Aplicar DNS agora"}
+                </button>
+                <p className="text-right text-xs text-slate-400">
+                  Não precisa refazer a preparação do PC.
+                </p>
+              </div>
             </div>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+            {dnsApplyMessage && (
+              <p
+                className={`mb-3 text-xs ${
+                  dnsApplyStatus === "error" ? "text-red-400" : "text-slate-400"
+                }`}
+              >
+                {dnsApplyMessage}
+              </p>
+            )}
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               {DNS_PROVIDERS.map((provider) => {
                 const selected = dnsProviderId === provider.id;
                 return (
@@ -233,13 +297,16 @@ function OptimizeRoute() {
                     key={provider.id}
                     type="button"
                     aria-pressed={selected}
-                    onClick={() => setDnsProviderId(provider.id)}
-                    disabled={prepareDone}
+                    onClick={() => {
+                      setDnsProviderId(provider.id);
+                      setDnsApplyStatus("idle");
+                      setDnsApplyMessage(null);
+                    }}
                     className={`min-h-14 rounded-xl border px-4 py-2.5 text-left transition ${
                       selected
                         ? "border-emerald-400 bg-emerald-400/10 shadow-[0_8px_25px_rgba(52,211,153,0.12)]"
                         : "border-purple-400/15 bg-black/28 hover:border-purple-300/45"
-                    } disabled:cursor-not-allowed disabled:opacity-60`}
+                    }`}
                   >
                     <span
                       className={`block text-sm font-black ${
