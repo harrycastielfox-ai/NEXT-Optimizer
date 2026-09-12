@@ -34,10 +34,10 @@ const DEFENDER_ACTION_ID = "allow-hermes-defender-exclusion";
 export const Route = createFileRoute("/defender")({
   head: () => ({
     meta: [
-      { title: "NEX Optimizer - Windows Defender" },
+      { title: "NEXT Optimizer - Windows Defender" },
       {
         name: "description",
-        content: "Liberacao especifica do NEX no Windows Defender sem desativar a protecao.",
+        content: "Liberacao especifica do NEXT no Windows Defender sem desativar a protecao.",
       },
     ],
   }),
@@ -88,15 +88,15 @@ function DefenderPage() {
   const modeLabel = HERMES_SAFE_TEST_MODE ? "Teste" : "Real";
   const adminLabel = systemContext.isElevated ? "Administrador ativo" : "Administrador pendente";
   const statusLabel = isAlreadyAllowed
-    ? "NEX liberado"
+    ? "NEXT liberado"
     : loadingState
       ? "Verificando permissão"
       : "Liberação recomendada";
   const statusText = isAlreadyAllowed
     ? "O executável atual já aparece nas exclusões do Defender."
     : HERMES_SAFE_TEST_MODE
-      ? "Modo teste ativo: o NEX valida o comando, mas ainda não altera o Windows Defender."
-      : "Ao confirmar, o NEX adiciona apenas o executável atual nas exclusões do Defender.";
+      ? "Modo teste ativo: o NEXT valida o comando, mas ainda não altera o Windows Defender."
+      : "Ao confirmar, o NEXT adiciona apenas o executável atual nas exclusões do Defender.";
   const actionUnavailable =
     !systemContext.isWindows || (!HERMES_SAFE_TEST_MODE && !systemContext.isElevated);
 
@@ -111,7 +111,7 @@ function DefenderPage() {
       return "Abra como administrador";
     }
     if (isAlreadyAllowed) {
-      return HERMES_SAFE_TEST_MODE ? "Validar novamente" : "NEX já liberado";
+      return HERMES_SAFE_TEST_MODE ? "Validar novamente" : "NEXT já liberado";
     }
 
     return HERMES_SAFE_TEST_MODE ? "Validar liberação" : "Liberar no Defender";
@@ -124,7 +124,7 @@ function DefenderPage() {
 
     if (!HERMES_SAFE_TEST_MODE) {
       const confirmed = window.confirm(
-        "O NEX vai adicionar somente o executável atual às exclusões do Windows Defender. Continuar?",
+        "O NEXT vai adicionar somente o executável atual às exclusões do Windows Defender. Continuar?",
       );
       if (!confirmed) {
         return;
@@ -174,7 +174,7 @@ function DefenderPage() {
     <div className="lightning-bg flex min-h-screen">
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
-        <main className="flex-1 overflow-hidden px-5 py-5 xl:px-7">
+        <main className="min-h-0 flex-1 overflow-y-auto px-5 py-5 xl:px-7">
           <div className="max-w-7xl">
             <header className="flex flex-col gap-3 xl:flex-row xl:items-stretch xl:justify-between">
               <div className="relative min-w-0 flex-1 overflow-hidden rounded-2xl border border-white/10 bg-card/45 px-4 py-3 shadow-[0_14px_42px_-36px_rgba(168,85,247,0.7)] backdrop-blur xl:max-w-[720px]">
@@ -182,13 +182,13 @@ function DefenderPage() {
                 <div className="relative flex min-h-[78px] flex-col justify-center">
                   <span className="inline-flex h-5 w-fit items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-2.5 text-[8px] font-black uppercase tracking-[0.18em] text-primary">
                     <ShieldCheck className="h-3 w-3" />
-                    NEX Security
+                    NEXT Security
                   </span>
                   <h1 className="mt-2 bg-gradient-to-r from-white via-fuchsia-100 to-primary bg-clip-text text-[clamp(24px,2vw,31px)] font-black leading-none tracking-normal text-transparent drop-shadow-[0_0_16px_rgba(168,85,247,0.18)]">
                     Liberar no Windows Defender
                   </h1>
                   <p className="mt-2 max-w-2xl text-[11px] leading-relaxed text-muted-foreground">
-                    Libere somente o executável do NEX quando o Windows bloquear o aplicativo. A
+                    Libere somente o executável do NEXT quando o Windows bloquear o aplicativo. A
                     proteção do computador continua ativa.
                   </p>
                 </div>
@@ -254,7 +254,7 @@ function DefenderPage() {
                     <TrustCard
                       icon={FileCheck2}
                       title="Executável atual"
-                      text="Somente o arquivo do NEX em execução."
+                      text="Somente o arquivo do NEXT em execução."
                     />
                     <TrustCard
                       icon={LockKeyhole}
@@ -339,7 +339,8 @@ function DefenderPage() {
                           Liberação no Windows Defender
                         </h2>
                         <p className="mt-1 text-[12px] text-muted-foreground">
-                          Siga as etapas na ordem indicada para liberar somente o executável do NEX.
+                          Siga as etapas na ordem indicada para liberar somente o executável do
+                          NEXT.
                         </p>
                       </div>
                     </div>

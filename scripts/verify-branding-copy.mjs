@@ -72,9 +72,9 @@ function hasNoMojibake(content) {
 
 const checks = [
   {
-    name: "Root usa metadata NEX sem starter remoto",
+    name: "Root usa metadata NEXT sem starter remoto",
     ok:
-      files.rootRoute.includes('@NEXOptimizer"') &&
+      files.rootRoute.includes('content: "NEXT Optimizer"') &&
       files.rootRoute.includes('content: "/nex-logo.png"') &&
       forbiddenRootCopy.every((fragment) => !files.rootRoute.includes(fragment)),
   },
@@ -95,7 +95,7 @@ const checks = [
       forbiddenRootCopy.every((fragment) => !files.errorPage.includes(fragment)),
   },
   {
-    name: "Wrapper de erro usa nome generico NEX",
+    name: "Wrapper de erro usa nome generico NEXT",
     ok:
       files.errorReporting.includes("reportClientError") &&
       !files.errorReporting.includes("reportLovableError") &&
@@ -112,10 +112,10 @@ const checks = [
   {
     name: "Tela Otimizar mantem copy principal com acentos corretos",
     ok:
-      files.otimizarRoute.includes("PROJETO DE OTIMIZAÇÃO") &&
-      files.otimizarRoute.includes("Preparação da Máquina") &&
-      files.otimizarRoute.includes("Otimização Avançada") &&
-      files.otimizarRoute.includes("Reinício não verificado"),
+      files.otimizarRoute.includes("Preparar e otimizar") &&
+      files.otimizarRoute.includes("Iniciar preparação") &&
+      files.otimizarRoute.includes("Iniciar otimização") &&
+      files.otimizarRoute.includes("Reinício necessário"),
   },
   {
     name: "Modais dos botoes mantem copy principal com acentos corretos",

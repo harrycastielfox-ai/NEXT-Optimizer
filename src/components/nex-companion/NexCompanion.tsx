@@ -165,8 +165,8 @@ export function NexCompanion() {
           type="button"
           onClick={openMainWindow}
           onMouseDown={startDragging}
-          aria-label={`NEX Companion, ${progress}% concluído. Clique para abrir o NEX.`}
-          title="Arraste para mover. Clique para abrir o NEX."
+          aria-label={`NEXT Companion, ${progress}% concluído. Clique para abrir o NEXT.`}
+          title="Arraste para mover. Clique para abrir o NEXT."
         >
           <span className="nex-companion-orb__aura" aria-hidden="true" />
           <NexProgressRing progress={progress} compact />
@@ -179,7 +179,7 @@ export function NexCompanion() {
             className="nex-companion-error-close"
             type="button"
             onClick={dismissErrorCompanion}
-            aria-label="Fechar alerta do NEX Companion"
+            aria-label="Fechar alerta do NEXT Companion"
             title="Fechar alerta"
           >
             <X size={13} strokeWidth={3} />

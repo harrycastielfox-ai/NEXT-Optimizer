@@ -1,8 +1,8 @@
 [package]
 name = "nex-optimizer"
 version = "0.1.0"
-description = "NEX Optimizer desktop engine"
-authors = ["NEX Optimizer Team"]
+description = "NEXT Optimizer desktop engine"
+authors = ["NEXT Optimizer Team"]
 license = "LicenseRef-Proprietary"
 edition = "2021"
 rust-version = "1.77.2"

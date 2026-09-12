@@ -8,11 +8,9 @@ import {
   Mail,
   ShieldCheck,
 } from "lucide-react";
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { getNexStoreUrl, openNexExternalUrl, useNexAuth } from "@/lib/nex-auth";
-
-const AUTO_VERIFY_RETRY_GRACE_MS = 5 * 60 * 1000;
-const autoVerifyAttempts = new Map<string, number>();
 
 export function NexLicenseGate({ children }: { children: ReactNode }) {
   const {
@@ -31,7 +29,6 @@ export function NexLicenseGate({ children }: { children: ReactNode }) {
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const autoVerifiedEmailRef = useRef<string | null>(null);
   const internalQaBypass = import.meta.env.VITE_NEX_INTERNAL_QA_BYPASS === "true";
   const storeUrl = getNexStoreUrl();
 
@@ -49,57 +46,6 @@ export function NexLicenseGate({ children }: { children: ReactNode }) {
     const nextEmail = user?.email ?? rememberedEmail;
     if (!email.trim() && nextEmail) setEmail(nextEmail);
   }, [email, rememberedEmail, user?.email]);
-
-  useEffect(() => {
-    const targetEmail = (rememberedEmail ?? email).trim().toLowerCase();
-    const shouldAutoVerify =
-      configured &&
-      !internalQaBypass &&
-      !loading &&
-      !user &&
-      Boolean(targetEmail) &&
-      effectiveDeviceAccess !== "checking" &&
-      autoVerifiedEmailRef.current !== targetEmail &&
-      Date.now() - (autoVerifyAttempts.get(targetEmail) ?? 0) > AUTO_VERIFY_RETRY_GRACE_MS;
-
-    if (!shouldAutoVerify) return;
-
-    let cancelled = false;
-    setBusy(true);
-    autoVerifiedEmailRef.current = targetEmail;
-    autoVerifyAttempts.set(targetEmail, Date.now());
-    setNotice("Validando acesso ativo neste computador...");
-    clearError();
-
-    void verifyEmailAccess(targetEmail)
-      .then((verified) => {
-        if (cancelled) return;
-        setNotice(`Acesso ${verified.planName} confirmado. Entrando no NEX...`);
-      })
-      .catch((activationError) => {
-        if (cancelled) return;
-        setNotice(
-          activationError instanceof Error ? activationError.message : String(activationError),
-        );
-      })
-      .finally(() => {
-        if (!cancelled) setBusy(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    clearError,
-    configured,
-    effectiveDeviceAccess,
-    email,
-    internalQaBypass,
-    loading,
-    rememberedEmail,
-    user,
-    verifyEmailAccess,
-  ]);
 
   // Available only in an explicitly generated internal QA build. Public builds keep this false.
   if (internalQaBypass) return children;
@@ -130,7 +76,7 @@ export function NexLicenseGate({ children }: { children: ReactNode }) {
         : await verifyEmailAccess(email);
       setCode("");
       setEmail(email.trim().toLowerCase());
-      setNotice(`Acesso ${activated.planName} ativado. Entrando no NEX...`);
+      setNotice(`Acesso ${activated.planName} ativado. Entrando no NEXT...`);
     } catch (activationError) {
       setNotice(
         activationError instanceof Error ? activationError.message : String(activationError),
@@ -142,7 +88,7 @@ export function NexLicenseGate({ children }: { children: ReactNode }) {
 
   async function handleBuy() {
     if (!storeUrl) {
-      setNotice("A loja oficial do NEX ainda não foi definida neste build.");
+      setNotice("A loja oficial do NEXT ainda não foi definida neste build.");
       return;
     }
     await openNexExternalUrl(storeUrl);
@@ -182,7 +128,7 @@ export function NexLicenseGate({ children }: { children: ReactNode }) {
           </div>
 
           <p className="mt-5 text-[11px] font-black uppercase tracking-[0.28em] text-primary">
-            NEX Optimizer
+            NEXT
           </p>
           <h1 className="mt-2 text-3xl font-black tracking-tight text-foreground">
             {checking ? "Validando acesso" : content.title}
@@ -265,8 +211,8 @@ export function NexLicenseGate({ children }: { children: ReactNode }) {
               </button>
 
               <p className="text-center text-xs leading-relaxed text-muted-foreground">
-                Já ativou neste PC? Informe apenas o e-mail. Primeira ativação ou renovação exige o
-                código recebido na compra.
+                Uma sessão salva neste PC permite entrar novamente. Se ela expirou, use o código
+                original da compra. A troca de computador é atendida pelo suporte.
               </p>
             </form>
           ) : (
@@ -277,6 +223,13 @@ export function NexLicenseGate({ children }: { children: ReactNode }) {
           )}
         </div>
 
+        <Link
+          to="/seguranca"
+          className="relative mt-4 block text-center text-sm text-primary underline"
+        >
+          Segurança e recuperação
+        </Link>
+
         <div className="relative mt-4 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
           <div className="flex items-center justify-center gap-2 rounded-xl border border-border/60 bg-background/40 px-3 py-2">
             <BadgeCheck className="h-4 w-4 text-primary" />
@@ -284,7 +237,7 @@ export function NexLicenseGate({ children }: { children: ReactNode }) {
           </div>
           <div className="flex items-center justify-center gap-2 rounded-xl border border-border/60 bg-background/40 px-3 py-2">
             <ShieldCheck className="h-4 w-4 text-primary" />
-            Travado por hardware
+            Vinculado ao computador
           </div>
         </div>
       </section>
@@ -307,19 +260,19 @@ function getBlockedContent({
     return {
       title: "Servidor de licenças não configurado",
       description:
-        "Este build não pode liberar o aplicativo até receber a configuração oficial do servidor NEX.",
+        "Este build não pode liberar o aplicativo até receber a configuração oficial do servidor NEXT.",
     };
   }
   if (checking) {
     return {
       title: "Validando seu acesso",
-      description: "O NEX está confirmando a licença e a identidade segura deste computador.",
+      description: "O NEXT está confirmando a licença e a identidade segura deste computador.",
     };
   }
   if (!signedIn) {
     return {
       title: "Entre para continuar",
-      description: "Use o e-mail da compra e o código NEX para liberar este computador.",
+      description: "Use o e-mail da compra e o código NEXT para liberar este computador.",
     };
   }
   if (deviceAccess === "blocked") {
@@ -338,17 +291,17 @@ function getBlockedContent({
   if (deviceAccess === "revoked") {
     return {
       title: "Acesso indisponível",
-      description: "Esta licença foi revogada e não pode liberar o NEX.",
+      description: "Esta licença foi revogada e não pode liberar o NEXT.",
     };
   }
   if (deviceAccess === "unavailable") {
     return {
       title: "Não foi possível validar a licença",
-      description: "Por segurança, o NEX fica bloqueado até o servidor confirmar este computador.",
+      description: "Por segurança, o NEXT fica bloqueado até o servidor confirmar este computador.",
     };
   }
   return {
     title: "Código de acesso necessário",
-    description: "Resgate um código NEX válido para vincular o acesso a este computador.",
+    description: "Resgate um código NEXT válido para vincular o acesso a este computador.",
   };
 }

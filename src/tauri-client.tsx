@@ -8,7 +8,7 @@ import "./styles.css";
 const rootElement = document.getElementById("root");
 
 if (!rootElement) {
-  throw new Error("NEX Optimizer root element not found.");
+  throw new Error("NEXT Optimizer root element not found.");
 }
 
 const router = getRouter(createHashHistory());

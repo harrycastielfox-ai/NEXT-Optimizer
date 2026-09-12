@@ -423,7 +423,8 @@ fn execute_advanced_plans(
     plans: Vec<AdvancedPlan>,
     dry_run: bool,
 ) -> Result<AdvancedApplyResult, String> {
-    let snapshot = restore::restore_create_snapshot(
+    crate::licensing::require_real_license(dry_run)?;
+    let snapshot = restore::create_snapshot(
         app.clone(),
         Some(build_snapshot_request(&plans, dry_run)),
     )?;
@@ -3899,7 +3900,9 @@ fn current_hermes_executable_path() -> Result<String, String> {
 fn is_allowed_hermes_executable_path(path: &str) -> bool {
     let normalized = path.trim().replace('/', "\\").to_ascii_lowercase();
     let bytes = normalized.as_bytes();
-    let allowed_suffix = normalized.ends_with("\\nex optimizer.exe")
+    let allowed_suffix = normalized.ends_with("\\next optimizer.exe")
+        || normalized.ends_with("\\next-optimizer.exe")
+        || normalized.ends_with("\\nex optimizer.exe")
         || normalized.ends_with("\\nex-optimizer.exe")
         || normalized.ends_with("\\hermes-optimizer.exe");
     allowed_suffix && bytes.get(1) == Some(&b':') && bytes.get(2) == Some(&b'\\')

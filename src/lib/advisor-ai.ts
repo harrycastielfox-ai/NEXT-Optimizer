@@ -120,7 +120,7 @@ export const unavailableAdvisorAiReport: AdvisorAiReport = {
     status: "unavailable",
     confidence: "low",
     coveragePercent: 0,
-    explanation: "NEX AI exige o backend Tauri local para analisar dados reais.",
+    explanation: "NEXT Insight exige o backend Tauri local para analisar dados reais.",
     components: [],
   },
   summary: {
@@ -169,10 +169,10 @@ export async function refreshAdvisorAiReport(): Promise<AdvisorAiReport> {
     const report = await invoke<AdvisorAiReport>("advisor_ai_engine_analyze");
     return writeLocalReportCache("advisor-ai-report", report);
   } catch (error) {
-    console.warn("NEX AI local indisponível.", error);
+    console.warn("NEXT Insight local indisponível.", error);
     return {
       ...unavailableAdvisorAiReport,
-      unavailableData: ["NEX AI local indisponível no backend Tauri."],
+      unavailableData: ["NEXT Insight local indisponível no backend Tauri."],
     };
   }
 }

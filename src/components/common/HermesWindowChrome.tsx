@@ -59,8 +59,8 @@ export const hermesWindowChromeCompatibility = {
   startResizeDragging,
   toggleMaximize,
   ariaLabels: {
-    maximize: 'aria-label="Maximizar NEX"',
-    close: 'aria-label="Fechar NEX"',
+    maximize: 'aria-label="Maximizar NEXT"',
+    close: 'aria-label="Fechar NEXT"',
   },
   directions: compatibilityResizeHandles,
 };

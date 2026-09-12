@@ -3,14 +3,11 @@ name: QA Windows Drop
 on:
   workflow_dispatch:
     inputs:
-      run_install_smoke:
-        description: "Run real NSIS/MSI install smoke on the disposable Windows runner"
+      upload_artifacts:
+        description: "Upload unsigned test installers (check account storage quota first)"
         required: false
-        default: "false"
-        type: choice
-        options:
-          - "false"
-          - "true"
+        default: false
+        type: boolean
   pull_request:
   push:
     branches:
@@ -19,77 +16,147 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: next-windows-qa-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  license-server:
+    name: Isolated license protocol and PostgreSQL tests
+    if: ${{ github.event.repository.private == false }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: next_license_ci
+          POSTGRES_PASSWORD: ci-only-not-a-production-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Check and test Edge Functions without runtime permissions
+        run: |
+          deno check --frozen --config supabase/functions/nex-license-admin/deno.json supabase/functions/nex-license-admin/index.ts
+          deno test --frozen --config supabase/functions/nex-license-session/deno.json supabase/tests/security.test.ts
+      - name: Apply all migrations to synthetic database and test as service_role
+        env:
+          PGHOST: 127.0.0.1
+          PGUSER: postgres
+          PGDATABASE: next_license_ci
+          PGPASSWORD: ci-only-not-a-production-password
+        run: |
+          psql -v ON_ERROR_STOP=1 -f supabase/tests/bootstrap.sql
+          for migration in supabase/migrations/*.sql; do
+            psql -v ON_ERROR_STOP=1 -f "$migration"
+          done
+          psql -v ON_ERROR_STOP=1 -f supabase/tests/license-sessions.sql
+
   qa-windows-drop:
-    name: QA drop on Windows
+    name: Safe checks and test-mode Windows build
+    # Standard hosted runners are free for public repositories. Do not run this
+    # automatically if visibility changes, or use a paid/larger runner label.
+    if: ${{ github.event.repository.private == false }}
     runs-on: windows-latest
     timeout-minutes: 90
 
     env:
-      HERMES_QA_AUTO_SAFE: "1"
-      HERMES_QA_ALLOW_WITHOUT_INSTALL_SMOKE: "1"
+      VITE_HERMES_SAFE_TEST_MODE: "true"
+      HERMES_SAFE_TEST_MODE: "true"
+      VITE_NEX_INTERNAL_QA_BYPASS: "false"
+      CARGO_TERM_COLOR: never
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
+          # No persistent cache: avoid storage charges outside the free quota.
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Lint
         run: npm run lint
 
       - name: TypeScript
-        run: npx tsc --noEmit
+        run: npm run typecheck
+
+      - name: Pure frontend unit tests
+        run: npm run test:unit
 
       - name: Release gates
         run: npm run verify:release-gates
 
-      - name: Automatic QA drop safe mode
-        if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.run_install_smoke != 'true' }}
-        run: npm run qa:manual:drop:auto
+      - name: Frontend regressions
+        run: |
+          npm run verify:branding-copy
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run verify:ui-shell
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run verify:optimization-flow
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run verify:safe-mode-flow
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Automatic QA drop with real install smoke
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_install_smoke == 'true' }}
-        env:
-          HERMES_QA_AUTO_SAFE: "0"
-          HERMES_QA_ALLOW_WITHOUT_INSTALL_SMOKE: "0"
-        run: npm run qa:manual:drop:auto:install
+      - name: Build web frontend
+        run: npm run build
 
-      - name: Release status
-        run: npm run release:status
+      - name: Check Rust
+        run: cargo check --locked --manifest-path src-tauri/Cargo.toml
 
-      - name: Diff check
+      - name: Audited Rust unit tests
+        run: powershell -NoProfile -File scripts/test-rust-unit-safe.ps1
+
+      - name: Build unsigned test-mode installers
+        run: npm run build:windows:test
+
+      - name: Verify whitespace
         run: git diff --check
 
-      - name: Upload QA logs and reports
+      - name: Record build evidence without installing or launching
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: hermes-qa-windows-drop-results
-          if-no-files-found: warn
-          path: |
-            .release/manual-qa-test-drop/results/**
-            .release/manual-qa-test-drop/latest-manual-qa-test-drop*.json
-            .release/manual-qa-test-drop/latest-manual-qa-test-drop*.md
-            .release/manual-qa/**/manual-qa-*.json
-            .release/manual-qa/**/manual-qa-*.md
-            .release/release-status.json
-            .release/release-status.md
+        shell: pwsh
+        run: |
+          "## NEXT automated Windows QA" >> $env:GITHUB_STEP_SUMMARY
+          "Commit: $env:GITHUB_SHA" >> $env:GITHUB_STEP_SUMMARY
+          "Mode: test; internal license bypass: false; installers are unsigned." >> $env:GITHUB_STEP_SUMMARY
+          "Only compilation and audited unit tests ran. Installation, app execution, rollback on a real Windows system, and Authenticode remain unverified." >> $env:GITHUB_STEP_SUMMARY
+          $installers = @(Get-ChildItem src-tauri/target/release/bundle -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Extension -in '.msi', '.exe' })
+          foreach ($installer in $installers) {
+            $hash = (Get-FileHash -LiteralPath $installer.FullName -Algorithm SHA256).Hash
+            "- $($installer.Name): SHA256 $hash" >> $env:GITHUB_STEP_SUMMARY
+          }
+          if ($installers.Count -eq 0) { "No installer was produced; see the failed step." >> $env:GITHUB_STEP_SUMMARY }
 
-      - name: Upload QA drop ZIP
-        if: always()
+      # Opt-in only: artifact storage shares the account's quota. The default
+      # workflow uses job logs/summary, which do not consume artifact storage.
+      - name: Upload unsigned test installers
+        if: ${{ success() && github.event_name == 'workflow_dispatch' && inputs.upload_artifacts }}
         uses: actions/upload-artifact@v4
         with:
-          name: hermes-qa-windows-drop-zip
-          if-no-files-found: warn
+          name: next-windows-test-${{ github.sha }}
+          retention-days: 1
+          if-no-files-found: error
           path: |
-            .release/manual-qa-test-drop/packages/*.zip
-            .release/manual-qa-test-drop/packages/*.sha256
-            .release/manual-qa-test-drop/packages/*-package.json
+            src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/bundle/nsis/*.exe

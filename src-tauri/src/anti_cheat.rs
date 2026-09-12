@@ -175,6 +175,7 @@ fn enable_memory_integrity(
     if !request.confirmed {
         return Err("Confirmacao obrigatoria para ativar Integridade de Memoria.".to_string());
     }
+    crate::licensing::require_real_license(dry_run)?;
 
     let stdout = run_powershell(POWERSHELL_ENABLE_MEMORY_INTEGRITY_SCRIPT)?;
     let raw = serde_json::from_str::<RawMemoryIntegrityActivation>(&stdout)

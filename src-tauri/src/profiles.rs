@@ -174,6 +174,7 @@ fn profiles_apply_blocking(
     if !dry_run && profile.requires_extra_confirmation && request.extreme_confirmed != Some(true) {
         return Err("Perfil Extremo exige confirmacao extra antes da aplicacao real.".to_string());
     }
+    crate::licensing::require_real_license(dry_run)?;
 
     append_profile_event(
         &app,

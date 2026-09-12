@@ -151,12 +151,13 @@ pub fn system_restart_computer(
         });
     }
 
+    crate::licensing::require_real_license(dry_run)?;
     run_shutdown_command(&[
         "/r",
         "/t",
         &delay_seconds.to_string(),
         "/c",
-        "NEX Optimizer solicitou reinicio para concluir a otimizacao.",
+        "NEXT Optimizer solicitou reinicio para concluir a otimizacao.",
     ])?;
 
     Ok(SystemRestartResult {

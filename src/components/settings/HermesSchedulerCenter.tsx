@@ -291,7 +291,7 @@ export function HermesSchedulerCenter() {
               <CalendarClock className="h-7 w-7" />
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] font-bold tracking-[0.22em] text-primary">AGENDA NEX</p>
+              <p className="text-[11px] font-bold tracking-[0.22em] text-primary">AGENDA NEXT</p>
               <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">
                 Manutenção Programada
               </h1>
@@ -661,7 +661,7 @@ function NextScheduleCard({ task, pendingCount }: { task?: SchedulerTask; pendin
       <div className="mt-4 flex items-start gap-2 rounded-2xl border border-primary/15 bg-primary/5 px-3 py-3 text-[12px] font-semibold leading-relaxed text-primary">
         <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0" />
         <span>
-          O NEX não fica rodando em segundo plano. A agenda é verificada ao abrir ou por clique.
+          O NEXT não fica rodando em segundo plano. A agenda é verificada ao abrir ou por clique.
         </span>
       </div>
     </div>
@@ -1197,7 +1197,7 @@ function readTasks(): { tasks: SchedulerTask[]; removedLegacyDefaults: boolean }
 
     return { tasks: normalizedTasks, removedLegacyDefaults };
   } catch (error) {
-    console.warn("Falha ao ler tarefas programadas NEX.", error);
+    console.warn("Falha ao ler tarefas programadas NEXT.", error);
     saveTasks([]);
     return { tasks: [], removedLegacyDefaults: false };
   }
@@ -1230,7 +1230,7 @@ function readHistory(clearLegacyHistory = false): SchedulerHistoryEntry[] {
     const parsed = JSON.parse(raw) as SchedulerHistoryEntry[];
     return Array.isArray(parsed) ? parsed.slice(0, MAX_HISTORY) : [];
   } catch (error) {
-    console.warn("Falha ao ler histórico do Scheduler NEX.", error);
+    console.warn("Falha ao ler histórico do Scheduler NEXT.", error);
     return [];
   }
 }
@@ -1260,7 +1260,7 @@ function readNotificationPreferences(): NotificationPreferences {
       ...parsed.notifications,
     };
   } catch (error) {
-    console.warn("Falha ao ler preferências de notificação NEX.", error);
+    console.warn("Falha ao ler preferências de notificação NEXT.", error);
     return DEFAULT_NOTIFICATION_PREFERENCES;
   }
 }

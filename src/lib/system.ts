@@ -75,7 +75,7 @@ export async function readSystemBootContext(): Promise<SystemBootContext> {
 
 export async function openWindowsSecurity(): Promise<void> {
   if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) {
-    throw new Error("Segurança do Windows indisponível fora do aplicativo NEX.");
+    throw new Error("Segurança do Windows indisponível fora do aplicativo NEXT.");
   }
 
   const { invoke } = await import("@tauri-apps/api/core");

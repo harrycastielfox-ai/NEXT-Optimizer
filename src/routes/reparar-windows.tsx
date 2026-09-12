@@ -6,8 +6,8 @@ import { HermesRepairCenter } from "@/components/settings/HermesRepairCenter";
 export const Route = createFileRoute("/reparar-windows")({
   head: () => ({
     meta: [
-      { title: "NEX Optimizer - Reparar Windows" },
-      { name: "description", content: "Centro de reparo do Windows no NEX Optimizer." },
+      { title: "NEXT Optimizer - Reparar Windows" },
+      { name: "description", content: "Centro de reparo do Windows no NEXT Optimizer." },
     ],
   }),
   component: RepararWindowsPage,

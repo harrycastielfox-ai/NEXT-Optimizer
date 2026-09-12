@@ -6,10 +6,10 @@ import { HermesSchedulerCenter } from "@/components/settings/HermesSchedulerCent
 export const Route = createFileRoute("/manutencao-programada")({
   head: () => ({
     meta: [
-      { title: "NEX Optimizer - Manutenção Programada" },
+      { title: "NEXT Optimizer - Manutenção Programada" },
       {
         name: "description",
-        content: "Tarefas locais e conservadoras do Scheduler Engine NEX.",
+        content: "Tarefas locais e conservadoras do Scheduler Engine NEXT.",
       },
     ],
   }),

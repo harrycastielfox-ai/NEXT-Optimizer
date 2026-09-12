@@ -44,7 +44,7 @@ const checks = [
       !files.sidebar.includes('to: "/inicializacao"'),
   },
   {
-    name: "Chrome customizado do NEX e carregado no root",
+    name: "Chrome customizado do NEXT e carregado no root",
     ok:
       files.rootRoute.includes("<HermesWindowChrome />") && files.rootRoute.includes("<Outlet />"),
   },
@@ -54,8 +54,8 @@ const checks = [
       files.windowChrome.includes('type WindowAction = "minimize" | "maximize" | "close"') &&
       files.windowChrome.includes("startDragging") &&
       files.windowChrome.includes("toggleMaximize") &&
-      files.windowChrome.includes('aria-label="Maximizar NEX"') &&
-      files.windowChrome.includes('aria-label="Fechar NEX"'),
+      files.windowChrome.includes('aria-label="Maximizar NEXT"') &&
+      files.windowChrome.includes('aria-label="Fechar NEXT"'),
   },
   {
     name: "Janela possui oito alcas de redimensionamento",
@@ -89,7 +89,7 @@ for (const { label, route, file } of requiredRoutes) {
     },
     {
       name: `${label} renderiza em area rolavel`,
-      ok: routeFile.includes("overflow-auto"),
+      ok: /<main\b[^>]*className="[^"]*\boverflow-(?:y-)?auto\b/.test(routeFile),
     },
   );
 }

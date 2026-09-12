@@ -1,5 +1,5 @@
 import { AlertTriangle, CheckCircle2, Loader2, Power, RotateCcw, ShieldCheck } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { HERMES_SAFE_TEST_MODE } from "@/lib/safe-mode";
 import { cancelSystemRestart, requestSystemRestart, type SystemRestartResult } from "@/lib/system";
 
@@ -16,20 +16,25 @@ export function RestartPrompt({ phase, onRestartRequested }: RestartPromptProps)
   const [message, setMessage] = useState<string | null>(null);
   const [restartResult, setRestartResult] = useState<SystemRestartResult | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
-  const autoRestartRequested = useRef(false);
 
   const isPrepare = phase === "prepare";
   const title =
     restartResult?.scheduled && countdown !== null
       ? `Reiniciando em ${countdown} segundo${countdown === 1 ? "" : "s"}`
       : isPrepare
-        ? "Reinício automático antes do Botão 2"
+        ? "Reinicie quando estiver pronto"
         : "Reinício final recomendado";
   const description = isPrepare
-    ? "A Fase 1 terminou. No modo real, o NEX agenda o reinício automaticamente e só libera a Fase 2 depois de detectar o novo boot."
+    ? "A Fase 1 terminou. Salve seu trabalho e escolha quando reiniciar para liberar a segunda etapa."
     : "A Fase 2 termina componentes, rede, perfil e Gamer. Reiniciar ajuda o Windows a consolidar os ajustes.";
 
   const handleRestart = useCallback(async () => {
+    if (
+      !HERMES_SAFE_TEST_MODE &&
+      !window.confirm("Salvou seu trabalho? O Windows será reiniciado em 60 segundos.")
+    ) {
+      return;
+    }
     setRequestState("running");
     setMessage(null);
 
@@ -37,10 +42,10 @@ export function RestartPrompt({ phase, onRestartRequested }: RestartPromptProps)
       const result = await requestSystemRestart({
         confirmed: !HERMES_SAFE_TEST_MODE,
         dryRun: HERMES_SAFE_TEST_MODE,
-        delaySeconds: 5,
+        delaySeconds: 60,
       });
       setRestartResult(result);
-      setCountdown(result.scheduled ? (result.delaySeconds ?? 5) : null);
+      setCountdown(result.scheduled ? (result.delaySeconds ?? 60) : null);
       setMessage(result.message);
       setRequestState("success");
       onRestartRequested?.(result);
@@ -49,15 +54,6 @@ export function RestartPrompt({ phase, onRestartRequested }: RestartPromptProps)
       setMessage(error instanceof Error ? error.message : String(error));
     }
   }, [onRestartRequested]);
-
-  useEffect(() => {
-    if (!isPrepare || HERMES_SAFE_TEST_MODE || autoRestartRequested.current) {
-      return;
-    }
-
-    autoRestartRequested.current = true;
-    void handleRestart();
-  }, [handleRestart, isPrepare]);
 
   useEffect(() => {
     if (!restartResult?.scheduled || countdown === null || countdown <= 0) {
@@ -109,10 +105,8 @@ export function RestartPrompt({ phase, onRestartRequested }: RestartPromptProps)
             <p className="mt-2 inline-flex items-center gap-2 text-[12px] font-semibold text-muted-foreground">
               <ShieldCheck className="h-4 w-4 text-success" />
               {HERMES_SAFE_TEST_MODE
-                ? "Modo teste: o NEX valida o comando, mas não reinicia o computador."
-                : isPrepare
-                  ? "Modo real: contagem automática de 5 segundos. Use Cancelar para interromper."
-                  : "Modo real: o Windows reinicia em 5 segundos depois da confirmação."}
+                ? "Modo teste: o NEXT valida o comando, mas não reinicia o computador."
+                : "O Windows reinicia em 60 segundos após sua confirmação. Você pode cancelar a contagem."}
             </p>
           </div>
         </div>
@@ -150,7 +144,7 @@ export function RestartPrompt({ phase, onRestartRequested }: RestartPromptProps)
               ? "Validar reinício"
               : restartResult?.scheduled && countdown !== null
                 ? `${countdown}s`
-                : "Reiniciar em 5s"}
+                : "Reiniciar em 60s"}
           </button>
         </div>
       </div>

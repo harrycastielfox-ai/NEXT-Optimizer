@@ -7,6 +7,8 @@ mod clean;
 mod diagnostic;
 mod gamer;
 mod gamer_dependencies;
+mod license_policy;
+mod license_transport;
 mod licensing;
 mod optimizer;
 mod performance;
@@ -427,6 +429,7 @@ pub fn run() {
 
     builder
         .setup(|app| {
+            licensing::initialize(app.handle()).map_err(std::io::Error::other)?;
             if cfg!(debug_assertions) {
                 app.handle().plugin(
                     tauri_plugin_log::Builder::default()
@@ -444,7 +447,7 @@ pub fn run() {
                 NEX_COMPANION_LABEL,
                 WebviewUrl::App("/companion".into()),
             )
-            .title("NEX Companion")
+            .title("NEXT Companion")
             .inner_size(NEX_COMPANION_COMPACT_WIDTH, NEX_COMPANION_COMPACT_HEIGHT)
             .resizable(false)
             .decorations(false)
@@ -461,13 +464,13 @@ pub fn run() {
             position_companion(&companion, &companion_settings);
 
             let tray_menu = tauri::menu::MenuBuilder::new(app)
-                .text("open-main", "Abrir NEX")
+                .text("open-main", "Abrir NEXT")
                 .text("optimization-status", "Status da otimização")
                 .separator()
                 .text("quit-nex", "Sair")
                 .build()?;
             let mut tray_builder = tauri::tray::TrayIconBuilder::with_id("nex-tray")
-                .tooltip("NEX Optimizer")
+                .tooltip("NEXT Optimizer")
                 .menu(&tray_menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id().as_ref() {
@@ -536,6 +539,9 @@ pub fn run() {
             gamer_dependencies::gamer_dependency_open_cache_dir,
             gamer_dependencies::gamer_dependency_verify_installers,
             licensing::nex_device_identity,
+            licensing::nex_license_activate,
+            licensing::nex_license_verify,
+            licensing::nex_license_sign_out,
             optimizer::optimize_now_plan,
             performance::performance_apply_controlled,
             performance::performance_engine_read,

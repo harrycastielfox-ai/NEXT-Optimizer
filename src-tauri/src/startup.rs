@@ -257,6 +257,7 @@ pub(crate) fn startup_engine_apply_blocking(
     if !dry_run && !request.confirmed {
         return Err("Confirmacao obrigatoria antes de alterar inicializacao.".to_string());
     }
+    crate::licensing::require_real_license(dry_run)?;
 
     let report = collect_startup_report_with_app(Some(&app));
     if has_fallback_warning(&report.warnings) {
@@ -279,7 +280,7 @@ pub(crate) fn startup_engine_apply_blocking(
         .map(|ids| !ids.is_empty())
         .unwrap_or(false);
 
-    let snapshot = restore::restore_create_snapshot(
+    let snapshot = restore::create_snapshot(
         app.clone(),
         Some(build_startup_snapshot_request(
             &request.action,

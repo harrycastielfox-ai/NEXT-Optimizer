@@ -30,7 +30,7 @@ export type OptimizeAuditAction = AuditSeed & {
 };
 
 export const OPTIMIZE_AUDIT_PHASES: AuditPhaseDefinition[] = [
-  auditPhase("plan", "Plano inteligente", "Orquestrador + NEX IA", [
+  auditPhase("plan", "Plano inteligente", "Orquestrador + NEXT Insight", [
     a(
       "diagnostic-health-score",
       "Ler saúde geral",
@@ -107,7 +107,7 @@ export const OPTIMIZE_AUDIT_PHASES: AuditPhaseDefinition[] = [
       "risk-baseline",
       "Classificar risco inicial",
       "risk.baseline",
-      "NEX local policy",
+      "NEXT local policy",
       "analysis",
       "info",
       true,
@@ -469,7 +469,7 @@ export const OPTIMIZE_AUDIT_PHASES: AuditPhaseDefinition[] = [
     ),
     a(
       "defender-exclusion-hermes",
-      "Permissao Defender do NEX",
+      "Permissao Defender do NEXT",
       "Defender.Exclusion.NEX",
       "allow-hermes-defender-exclusion",
       "engine",
@@ -686,7 +686,7 @@ function cleanupSeeds(): AuditSeed[] {
     "WER reports",
     "Installer leftovers",
     "Old update residues",
-    "NEX quarantine purge",
+    "NEXT quarantine purge",
     "DNS resolver cache",
     "Store cache",
     "NVIDIA shader cache",

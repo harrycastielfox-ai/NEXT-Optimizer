@@ -15,6 +15,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $root = Resolve-Path (Join-Path $PSScriptRoot "..")
+. (Join-Path $PSScriptRoot "get-windows-installer-targets.ps1")
 $releaseGateScript = Join-Path $PSScriptRoot "verify-release-gates.ps1"
 $safeModeValue = if ($Mode -eq "real") { "false" } else { "true" }
 $internalQaBypassValue = if ($InternalQaBypass) { "true" } else { "false" }
@@ -59,22 +60,7 @@ function Get-HermesInstallerTargets {
     [string]$BundleSelection
   )
 
-  $allTargets = @(
-    [pscustomobject]@{
-      kind = "nsis"
-      path = Join-Path $RootPath "src-tauri\target\release\bundle\nsis\NEX Optimizer_0.1.0_x64-setup.exe"
-    },
-    [pscustomobject]@{
-      kind = "msi"
-      path = Join-Path $RootPath "src-tauri\target\release\bundle\msi\NEX Optimizer_0.1.0_x64_en-US.msi"
-    }
-  )
-
-  if ($BundleSelection -eq "all") {
-    return $allTargets
-  }
-
-  return @($allTargets | Where-Object { $_.kind -eq $BundleSelection })
+  return @(Get-NextWindowsInstallerTargets -RootPath $RootPath -Bundles $BundleSelection)
 }
 
 function Assert-HermesSignedInstallers {
@@ -181,8 +167,13 @@ try {
   }
 
   & npx.cmd @tauriArgs
+  $buildExitCode = $LASTEXITCODE
 } finally {
   Pop-Location
+}
+
+if ($buildExitCode -ne 0) {
+  throw "Build Tauri falhou (exit $buildExitCode). Nenhum instalador foi validado."
 }
 
 if ($Signed) {

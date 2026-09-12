@@ -33,7 +33,7 @@ export function readNexOptimizationState(): NexOptimizationState {
 
     return normalizeOptimizationState(JSON.parse(raw) as Partial<NexOptimizationState>);
   } catch (error) {
-    console.warn("Falha ao recuperar o estado do NEX Companion.", error);
+    console.warn("Falha ao recuperar o estado do NEXT Companion.", error);
     return DEFAULT_NEX_OPTIMIZATION_STATE;
   }
 }

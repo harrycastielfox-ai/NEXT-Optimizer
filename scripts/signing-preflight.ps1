@@ -7,6 +7,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $root = Resolve-Path (Join-Path $PSScriptRoot "..")
+. (Join-Path $PSScriptRoot "get-windows-installer-targets.ps1")
 $releaseDir = Join-Path $root ".release"
 New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
 
@@ -137,10 +138,9 @@ $certificateMatch = Get-SigningCertificateOrNull -Thumbprint $CertificateThumbpr
 $certificate = if ($certificateMatch) { $certificateMatch.certificate } else { $null }
 $signtool = Find-SignToolOrNull
 
-$installerReports = @(
-  Get-InstallerReport -Kind "nsis" -Path (Join-Path $root "src-tauri\target\release\bundle\nsis\NEX Optimizer_0.1.0_x64-setup.exe")
-  Get-InstallerReport -Kind "msi" -Path (Join-Path $root "src-tauri\target\release\bundle\msi\NEX Optimizer_0.1.0_x64_en-US.msi")
-)
+$installerReports = @(Get-NextWindowsInstallerTargets -RootPath $root | ForEach-Object {
+  Get-InstallerReport -Kind $_.kind -Path $_.path
+})
 
 $blockers = New-Object System.Collections.Generic.List[string]
 $warnings = New-Object System.Collections.Generic.List[string]

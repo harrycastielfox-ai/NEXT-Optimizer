@@ -26,8 +26,8 @@ import {
 export const Route = createFileRoute("/diagnostico")({
   head: () => ({
     meta: [
-      { title: "NEX Optimizer - Diagnóstico" },
-      { name: "description", content: "Benchmark local leve do NEX Optimizer." },
+      { title: "NEXT Optimizer - Diagnóstico" },
+      { name: "description", content: "Benchmark local leve do NEXT Optimizer." },
     ],
   }),
   component: DiagnosticoPage,
@@ -192,9 +192,9 @@ function HermesAiDiagnosticPanel({ report }: { report: BenchmarkReport }) {
               <BrainCircuit className="h-6 w-6" />
             </div>
             <div>
-              <p className="text-[10px] font-bold tracking-[0.22em] text-primary">NEX AI</p>
+              <p className="text-[10px] font-bold tracking-[0.22em] text-primary">NEXT Insight</p>
               <h2 className="mt-1 text-xl font-bold leading-tight text-foreground">
-                Centro de Inteligencia NEX
+                Centro de Inteligencia NEXT
               </h2>
               <p className="mt-1 max-w-2xl text-[13px] text-muted-foreground">
                 Interpretacao local do benchmark. Nenhuma ação e aplicada e nenhum dado sai do
@@ -354,7 +354,7 @@ function stateLabel(score: number) {
 function stateText(score: number) {
   if (score >= 90) return "Seu sistema apresenta bom estado geral e não exige ajustes agressivos.";
   if (score >= 80) return "Seu sistema está saudável, com oportunidades pontuais de melhoria.";
-  if (score >= 65) return "O NEX encontrou pontos que podem ser otimizados com segurança.";
+  if (score >= 65) return "O NEXT encontrou pontos que podem ser otimizados com segurança.";
   return "O benchmark indica que vale revisar desempenho, inicialização e limpeza com cuidado.";
 }
 

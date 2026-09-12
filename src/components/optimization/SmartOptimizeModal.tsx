@@ -43,6 +43,7 @@ import {
 } from "@/lib/optimize-audit-catalog";
 import { publishNexOptimizationState } from "@/lib/nex-companion";
 import type { NexOptimizationStatus, NexOptimizationStepStatus } from "@/types/nex-companion";
+import { hasExecutionIssues } from "@/lib/execution-outcome";
 
 type RunStatus = "idle" | "running" | "completed" | "failed" | "cancelled";
 type PhaseStatus = "pending" | "running" | "completed" | "unavailable" | "failed" | "cancelled";
@@ -74,7 +75,7 @@ type PlanAction = {
 };
 
 const phaseTemplates: OptimizePhase[] = [
-  phase("plan", "Plano inteligente", "Orquestrador + NEX IA", BrainCircuit, 14),
+  phase("plan", "Plano inteligente", "Orquestrador + NEXT Insight", BrainCircuit, 14),
   phase("safety", "Permissões e confirmação", "Modo teste, logs e controle", ShieldCheck, 10),
   phase("components", "Componentes essenciais", "VC++, DirectX e dependências", Wrench, 18),
   phase("cleanup", "Limpeza segura", "Temporários, cache e logs", BrushCleaning, 26),
@@ -138,7 +139,7 @@ export function SmartOptimizeModal({
     setFinalExecutionReport(null);
     reportActions.current = [];
     setRunStatus("running");
-    setCurrentStatus("Preparando plano único do NEX.");
+    setCurrentStatus("Preparando plano único do NEXT.");
     void runSmartOptimization(runId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, runKey]);
@@ -150,11 +151,12 @@ export function SmartOptimizeModal({
   const progress = Math.round((processed / phases.length) * 100);
   const remainingProgress = Math.max(0, 100 - progress);
   const completedActionCount = phases
-    .filter((item) => item.status === "completed" || item.status === "unavailable")
+    .filter((item) => item.status === "completed")
     .reduce((total, item) => total + item.plannedActions, 0);
   const activePhase = phases.find((item) => item.status === "running");
+  const hasIssues = finalExecutionReport ? hasExecutionIssues(finalExecutionReport) : false;
   const canCancel = runStatus === "running" && !cancelRequested.current;
-  const canClose = runStatus !== "running" || cancelRequested.current;
+  const canClose = runStatus !== "running";
   const planActions = useMemo(() => buildOptimizationPlan(reports), [reports]);
   const readyPlanActions = useMemo(
     () => planActions.filter((item) => item.status === "ready" || item.status === "ok").length,
@@ -166,7 +168,7 @@ export function SmartOptimizeModal({
       return;
     }
 
-    const status = mapRunStatus(runStatus);
+    const status = runStatus === "completed" && hasIssues ? "error" : mapRunStatus(runStatus);
     const companionSteps = phases.map((item) => ({
       id: item.id,
       title: item.title,
@@ -179,10 +181,12 @@ export function SmartOptimizeModal({
       phase: "optimize",
       isRunning: status === "running" || status === "paused",
       progress: runStatus === "completed" ? 100 : progress,
-      currentStep: runStatus === "completed" ? "Otimização concluída" : currentStatus,
+      currentStep: currentStatus,
       currentDetail:
         runStatus === "completed"
-          ? "Tudo pronto. O plano global foi finalizado."
+          ? hasIssues
+            ? "Consulte as pendências no relatório."
+            : "O plano global foi finalizado."
           : activePhase?.subtitle,
       startedAt: companionStartedAt.current,
       updatedAt: Date.now(),
@@ -194,9 +198,9 @@ export function SmartOptimizeModal({
         .map((item) => item.title),
       steps: companionSteps,
       status,
-      errorMessage: runStatus === "failed" ? currentStatus : undefined,
+      errorMessage: runStatus === "failed" || hasIssues ? currentStatus : undefined,
     });
-  }, [activePhase?.subtitle, currentStatus, open, phases, progress, runStatus]);
+  }, [activePhase?.subtitle, currentStatus, hasIssues, open, phases, progress, runStatus]);
 
   async function runSmartOptimization(runId: number) {
     try {
@@ -213,6 +217,28 @@ export function SmartOptimizeModal({
           : "Otimização real interrompida.",
       );
       appendLog("error", errorMessage(error));
+      const partialReport = buildExecutionReport({
+        phase: "optimize",
+        title: "Otimização interrompida",
+        safeMode: HERMES_SAFE_TEST_MODE,
+        actions: [
+          ...reportActions.current,
+          {
+            id: "optimize-interrupted",
+            title: "Execução interrompida",
+            detail: "Confira os resultados antes de repetir a otimização.",
+            phase: "optimize",
+            status: "failed",
+            outputs: [errorMessage(error)],
+            plannedCount: 1,
+          },
+        ],
+        notes: [
+          "Algumas ações anteriores podem ter sido aplicadas. Consulte Segurança e Recuperação.",
+        ],
+      });
+      setFinalExecutionReport(partialReport);
+      onCompleted?.(partialReport);
     }
   }
 
@@ -259,7 +285,7 @@ export function SmartOptimizeModal({
     );
     reportActions.current = detailedActions;
 
-    if (activeRun.current !== runId) {
+    if (shouldStop(runId)) {
       return;
     }
 
@@ -282,7 +308,7 @@ export function SmartOptimizeModal({
       actions: detailedActions,
       notes: [
         "Botão 2 concluído em fluxo guiado.",
-        `O catálogo atual possui ${OPTIMIZE_AUDIT_ACTION_TARGET} ações auditáveis por fases do plano NEX.`,
+        `O catálogo atual possui ${OPTIMIZE_AUDIT_ACTION_TARGET} ações auditáveis por fases do plano NEXT.`,
         ...gamerDependencyReportNotes(nextReports),
         HERMES_SAFE_TEST_MODE
           ? "Modo teste: nenhuma alteração real foi aplicada."
@@ -290,6 +316,9 @@ export function SmartOptimizeModal({
       ],
     });
     setFinalExecutionReport(executionReport);
+    if (hasExecutionIssues(executionReport)) {
+      setCurrentStatus("Otimização com pendências. Consulte o relatório.");
+    }
     onCompleted?.(executionReport);
   }
 
@@ -320,9 +349,12 @@ export function SmartOptimizeModal({
       const message = errorMessage(error);
       updatePhase(phaseId, {
         status: "unavailable",
-        outputs: [message, "Fase isolada sem efeitos."],
+        outputs: [message, "A fase não concluiu. Ações anteriores podem ter sido aplicadas."],
       });
-      upsertReportAction(phaseId, "unavailable", [message, "Fase isolada sem efeitos."]);
+      upsertReportAction(phaseId, "unavailable", [
+        message,
+        "A fase não concluiu. Consulte Segurança e Recuperação.",
+      ]);
       appendLog("warning", `${template?.title ?? phaseId}: ${message}`);
       if (!HERMES_SAFE_TEST_MODE) {
         throw new Error(`${template?.title ?? phaseId}: ${message}`);
@@ -355,8 +387,7 @@ export function SmartOptimizeModal({
 
   function requestCancel() {
     cancelRequested.current = true;
-    setRunStatus("cancelled");
-    setCurrentStatus("Cancelamento solicitado. O NEX não iniciara novas fases.");
+    setCurrentStatus("Cancelamento solicitado. Aguardando a ação atual terminar.");
     setPhases((current) =>
       current.map((item) =>
         item.status === "pending"
@@ -387,9 +418,8 @@ export function SmartOptimizeModal({
   }
 
   function appendLog(level: LogItem["level"], message: string) {
-    setLogs((current) =>
-      [{ id: `${Date.now()}-${current.length}`, level, message }, ...current].slice(0, 8),
-    );
+    const id = crypto.randomUUID();
+    setLogs((current) => [{ id, level, message }, ...current].slice(0, 8));
   }
 
   if (!open) {
@@ -429,12 +459,12 @@ export function SmartOptimizeModal({
           </button>
         </header>
 
-        <div className="px-5 py-5 lg:px-6">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 lg:px-6">
           <section className="mx-auto flex max-w-3xl flex-col items-center py-4 text-center">
             <span className="grid h-14 w-14 place-items-center rounded-2xl bg-primary/12 text-primary">
-              {runStatus === "completed" ? (
+              {runStatus === "completed" && !hasIssues ? (
                 <CheckCircle2 className="h-7 w-7" />
-              ) : runStatus === "failed" || runStatus === "cancelled" ? (
+              ) : runStatus === "failed" || runStatus === "cancelled" || hasIssues ? (
                 <AlertTriangle className="h-7 w-7" />
               ) : (
                 <Loader2 className="h-7 w-7 animate-spin" />
@@ -446,7 +476,9 @@ export function SmartOptimizeModal({
             <h3 className="mt-2 text-xl font-black text-foreground">{currentStatus}</h3>
             <p className="mt-1 text-sm text-muted-foreground">
               {runStatus === "completed"
-                ? "O processo foi concluído."
+                ? hasIssues
+                  ? "Há ações que exigem revisão."
+                  : "O processo foi concluído."
                 : `${activePhase?.title ?? "Finalizando"} · ${progress}% concluído`}
             </p>
             <div className="mt-5 h-3 w-full overflow-hidden rounded-full bg-muted">
@@ -462,7 +494,10 @@ export function SmartOptimizeModal({
             </div>
           </section>
 
-          <div className="hidden">
+          <details className="mt-4">
+            <summary className="cursor-pointer text-sm font-bold text-primary">
+              Ver etapas, resultados e relatório
+            </summary>
             <section className="mb-4 grid grid-cols-1 gap-3 lg:grid-cols-4">
               <SummaryCard
                 icon={Zap}
@@ -495,12 +530,12 @@ export function SmartOptimizeModal({
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                 <div>
                   <p className="text-sm font-bold">
-                    Plano NEX validado antes de qualquer mudança real.
+                    Plano NEXT validado antes de qualquer mudança real.
                   </p>
                   <p className="mt-1 text-[12px] leading-relaxed">
                     {HERMES_SAFE_TEST_MODE
-                      ? "Modo teste ativo: o NEX confere o caminho completo sem alterar o Windows."
-                      : "Modo real ligado: o NEX executa somente ajustes liberados e confirmados pelo motor."}
+                      ? "Modo teste ativo: o NEXT confere o caminho completo sem alterar o Windows."
+                      : "Modo real ligado: o NEXT executa somente ajustes liberados e confirmados pelo motor."}
                   </p>
                 </div>
               </div>
@@ -547,15 +582,15 @@ export function SmartOptimizeModal({
               </div>
 
               <div className="grid grid-cols-3 gap-2 rounded-2xl border border-border/70 bg-background/72 p-3 text-center">
-                <ProgressStat label="Motor" value="NEX" />
+                <ProgressStat label="Motor" value="NEXT" />
                 <ProgressStat label="Validadas" value={`${readyPlanActions}`} />
                 <ProgressStat label="Modo" value={HERMES_SAFE_TEST_MODE ? "Teste" : "Real"} />
               </div>
             </div>
-          </div>
+          </details>
         </div>
 
-        {runStatus === "completed" && (
+        {runStatus === "completed" && !hasIssues && !HERMES_SAFE_TEST_MODE && (
           <div className="border-t border-border/70 bg-background/78 px-5 py-4 lg:px-6">
             <RestartPrompt phase="optimize" />
           </div>
@@ -718,7 +753,7 @@ function buildOptimizationPlan(reports: OptimizeAllReports): PlanAction[] {
 
   actions.push({
     id: "profile",
-    title: "Plano global NEX",
+    title: "Plano global NEXT",
     detail: "Consolidação interna sem perfil favorito e sem escolha manual.",
     status: "ready",
   });
@@ -777,6 +812,7 @@ function ProgressStat({ label, value }: { label: string; value: string }) {
 }
 
 function OptimizationSuccessPanel({ report }: { report: ExecutionReport }) {
+  const hasIssues = hasExecutionIssues(report);
   return (
     <section
       data-testid="hermes-optimize-success"
@@ -789,13 +825,17 @@ function OptimizationSuccessPanel({ report }: { report: ExecutionReport }) {
           </span>
           <div className="min-w-0">
             <p className="text-[11px] font-black uppercase tracking-[0.18em] text-success">
-              Sucesso
+              {hasIssues ? "Pendências" : report.safeMode ? "Simulação" : "Resultado"}
             </p>
-            <h3 className="mt-1 text-xl font-black text-foreground">Otimização concluída</h3>
+            <h3 className="mt-1 text-xl font-black text-foreground">
+              {hasIssues ? "Otimização incompleta" : "Otimização concluída"}
+            </h3>
             <p className="mt-1 text-sm font-medium text-muted-foreground">
-              {report.safeMode
-                ? "Modo teste validado. O NEX está pronto para executar esse plano no modo real."
-                : "Seu PC foi otimizado com sucesso. Reinicie para sentir o melhor resultado."}
+              {hasIssues
+                ? "Consulte os resultados. Algumas ações falharam ou não foram confirmadas."
+                : report.safeMode
+                  ? "Simulação concluída. A execução real ainda exige validação em ambiente de testes."
+                  : "Os ajustes foram executados e verificados. Reinicie quando estiver pronto."}
             </p>
           </div>
         </div>
@@ -806,7 +846,7 @@ function OptimizationSuccessPanel({ report }: { report: ExecutionReport }) {
               Plano
             </span>
             <span className="block text-sm font-black text-foreground">
-              {report.targetActions} ações
+              {report.summary.completedActions}/{report.summary.plannedActions} ações
             </span>
           </span>
           <span className="rounded-xl border border-primary/20 bg-primary/10 px-3 py-2">
@@ -956,9 +996,9 @@ function PhaseCard({ phase }: { phase: OptimizePhase }) {
           </div>
           {phase.outputs.length > 0 && (
             <div className="mt-3 space-y-1.5">
-              {phase.outputs.slice(0, 3).map((output) => (
+              {phase.outputs.slice(0, 3).map((output, index) => (
                 <p
-                  key={output}
+                  key={`${phase.id}-${index}`}
                   className="rounded-lg border border-border/60 bg-muted/45 px-2.5 py-1.5 text-[11px] font-medium text-foreground"
                 >
                   {output}
@@ -1193,7 +1233,7 @@ function dependencyInstallVerification(
   if (action.status === "installed") {
     return {
       status: "confirmed",
-      detail: "Instalador verificado por SHA256/assinatura e executado pelo motor NEX.",
+      detail: "Instalador verificado por SHA256/assinatura e executado pelo motor NEXT.",
       checkedAt,
     };
   }
@@ -1201,7 +1241,7 @@ function dependencyInstallVerification(
   if (action.status === "skipped") {
     return {
       status: "confirmed",
-      detail: "Dependência já detectada no Windows; o NEX não reinstalou.",
+      detail: "Dependência já detectada no Windows; o NEXT não reinstalou.",
       checkedAt,
     };
   }

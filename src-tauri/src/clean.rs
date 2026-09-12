@@ -263,6 +263,7 @@ pub(crate) fn clean_engine_apply_blocking(
     if !dry_run && !request.confirmed {
         return Err("Confirmacao obrigatoria antes de aplicar limpeza real.".to_string());
     }
+    crate::licensing::require_real_license(dry_run)?;
 
     let mut warnings = Vec::new();
     let scan = collect_clean_scan();
@@ -284,7 +285,7 @@ pub(crate) fn clean_engine_apply_blocking(
         return Err("Nenhum arquivo elegivel para quarentena segura foi encontrado.".to_string());
     }
 
-    let snapshot = restore::restore_create_snapshot(
+    let snapshot = restore::create_snapshot(
         app.clone(),
         Some(build_clean_snapshot_request(&plans, dry_run)),
     )?;
@@ -881,6 +882,7 @@ fn purge_expired_quarantine(
     if !dry_run && !confirmed {
         return Err("Confirmacao obrigatoria antes de limpar quarentena expirada.".to_string());
     }
+    crate::licensing::require_real_license(dry_run)?;
 
     let root = clean_quarantine_root(app)?;
     let mut warnings = Vec::new();
