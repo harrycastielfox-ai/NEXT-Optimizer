@@ -205,6 +205,30 @@ export function SmartOptimizeModal({
   async function runSmartOptimization(runId: number) {
     try {
       await runPhases(runId, 0, {});
+      if (activeRun.current === runId && cancelRequested.current) {
+        const partialReport = buildExecutionReport({
+          phase: "optimize",
+          title: "Otimização cancelada",
+          safeMode: HERMES_SAFE_TEST_MODE,
+          actions: [
+            ...reportActions.current,
+            {
+              id: "optimize-cancelled",
+              title: "Execução cancelada",
+              phase: "optimize",
+              detail: "Cancelamento não desfaz as ações já executadas.",
+              status: "cancelled",
+              outputs: [],
+              plannedCount: 1,
+            },
+          ],
+          notes: ["Ações anteriores podem ter sido aplicadas. Consulte Segurança e Recuperação."],
+        });
+        setFinalExecutionReport(partialReport);
+        onCompleted?.(partialReport);
+        setRunStatus("cancelled");
+        setCurrentStatus("Otimização cancelada. O relatório parcial foi preservado.");
+      }
     } catch (error) {
       if (activeRun.current !== runId) {
         return;
@@ -238,7 +262,11 @@ export function SmartOptimizeModal({
         ],
       });
       setFinalExecutionReport(partialReport);
-      onCompleted?.(partialReport);
+      try {
+        onCompleted?.(partialReport);
+      } catch (saveError) {
+        appendLog("error", `Não foi possível salvar o relatório: ${String(saveError)}`);
+      }
     }
   }
 
@@ -407,7 +435,6 @@ export function SmartOptimizeModal({
       return false;
     }
 
-    setRunStatus("cancelled");
     return true;
   }
 

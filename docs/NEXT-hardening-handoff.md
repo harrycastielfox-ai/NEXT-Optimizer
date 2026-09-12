@@ -10,6 +10,7 @@ Atualizado em 12/09/2026. Este trabalho não autoriza publicar o app como pronto
 - Servidor usa somente hashes dos tokens, vínculo de dispositivo, revogação, rate limit persistente e auditoria sem payloads/segredos. RPCs antigos de autorização somente por e-mail são desabilitados.
 - Interface não anuncia atualizador automático inexistente. Conta orienta transferência manual com suporte; Google OAuth não é apresentado como disponível.
 - CI em runners padrão de repositório público, sem cache/artifacts automáticos: lint, TypeScript, testes puros, build, Rust auditado e instaladores em modo teste. PostgreSQL sintético valida migrações sem conexão com o banco real.
+- Dependências indiretas corrigidas com npm 10, sem atualizações major forçadas; Vite 7.3.6 aceita esbuild corrigido 0.28.2. `npm audit --package-lock-only` passou sem alertas na revisão. Instalação suportada: `npm ci --ignore-scripts`; `package-lock.json` é a referência. O `bun.lock` antigo foi removido para não instalar novamente versões vulneráveis divergentes; recuperável no Git. Supabase JS está fixado em 2.110.6.
 
 ## Implantação do licenciamento: pendente de acesso
 
@@ -19,6 +20,7 @@ O novo app exige **a migração e ambas as Edge Functions novas juntas**. O prot
 
 1. Obter acesso autorizado ao projeto existente e confirmar que corresponde ao host fixo em `src-tauri/src/license_transport.rs`.
 2. Fazer backup e validar o histórico remoto de migrações, esquema e privilégios. Testes CI usam um PostgreSQL vazio com fixtures de Auth, não validam drift ou dados de produção.
+   O histórico de julho continha um parâmetro de saída `requested_email` com o mesmo nome da entrada em `get_email_device_entitlement`; foi corrigido para `account_email` para permitir bootstrap. Esse ajuste de arquivo histórico **não altera bancos já existentes**: comparar a definição remota antes de migrar, sem reaplicar o histórico à força. A API antiga fica revogada pelo novo protocolo.
 3. Planejar janela de manutenção/atualização: aplicar `20260912012737_harden_license_sessions.sql` e publicar `nex-license-session` e `nex-license-admin` com seus lockfiles. `verify_jwt = false` é intencional: ativação exige código de compra, verificação exige token opaco e administração exige chave secreta própria validada pelo backend.
 4. Manter `SUPABASE_SERVICE_ROLE_KEY` apenas nos segredos do servidor. Não colocar em variáveis VITE, arquivos versionados, conversas ou logs. Chaves administrativas são guardadas por hash no banco.
 5. Validar em ambiente autorizado: ativação válida/inválida, mesmo dispositivo, outro dispositivo, expiração, rede offline, logout, revogação e transferência. Usuários existentes precisam do código original para recriar a sessão. Reativar o mesmo código no mesmo PC não renova a duração.

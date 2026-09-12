@@ -189,6 +189,7 @@ export function QuickPrepareModal({
       );
 
       if (shouldStop(runId)) {
+        if (activeRun.current === runId) await finishCancelled(nextReports);
         return;
       }
 
@@ -200,6 +201,7 @@ export function QuickPrepareModal({
       reportActions.current = verifiedActions;
 
       if (shouldStop(runId)) {
+        if (activeRun.current === runId) await finishCancelled(nextReports);
         return;
       }
 
@@ -264,8 +266,37 @@ export function QuickPrepareModal({
         ],
       });
       setFinalExecutionReport(partialReport);
-      await onCompleted?.({}, partialReport);
+      try {
+        await onCompleted?.({}, partialReport);
+      } catch (saveError) {
+        appendLog("error", `Não foi possível salvar o relatório: ${String(saveError)}`);
+      }
     }
+  }
+
+  async function finishCancelled(nextReports: QuickPrepareReports) {
+    const partialReport = buildExecutionReport({
+      phase: "prepare",
+      title: "Preparação cancelada",
+      safeMode: HERMES_SAFE_TEST_MODE,
+      actions: [
+        ...reportActions.current,
+        {
+          id: "prepare-cancelled",
+          title: "Execução cancelada",
+          phase: "prepare",
+          detail: "Cancelamento não desfaz as ações já executadas.",
+          status: "cancelled",
+          outputs: [],
+          plannedCount: 1,
+        },
+      ],
+      notes: ["Ações anteriores podem ter sido aplicadas. Consulte Segurança e Recuperação."],
+    });
+    setFinalExecutionReport(partialReport);
+    await onCompleted?.(nextReports, partialReport);
+    setRunStatus("cancelled");
+    setCurrentStatus("Preparação cancelada. O relatório parcial foi preservado.");
   }
 
   function handleTaskStart(runId: number, update: QuickPrepareTaskUpdate) {
@@ -362,7 +393,6 @@ export function QuickPrepareModal({
     if (!cancelRequested.current) {
       return false;
     }
-    setRunStatus("cancelled");
     return true;
   }
 
