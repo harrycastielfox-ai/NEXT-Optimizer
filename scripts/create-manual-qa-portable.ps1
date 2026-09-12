@@ -159,6 +159,7 @@ $manualEvidenceLauncherPath = Join-Path $portableRoot "RUN-MANUAL-QA-EVIDENCE.ps
 $manualEvidenceLauncher = @'
 param(
   [switch]$QuickPassAll,
+  [switch]$InitializeOnly,
   [string]$QuickEvidence = "Validado em maquina limpa/VM: janela, rotas, scroll, Dashboard leitura, Botoes 1/2 em modo teste, Fate Trigger, Defender, Manutencao e Configuracoes.",
   [string]$QuickNotes = "Evidencia gerada pelo modo rapido do pacote QA Hermes. Itens protegidos de instalacao e Authenticode ficam fora deste arquivo."
 )
@@ -232,7 +233,37 @@ function New-ManualEvidenceEntry {
 
 $results = New-Object System.Collections.Generic.List[object]
 
+if ($InitializeOnly) {
+  $evidencePath = Join-Path $qaPath "manual-qa-evidence.json"
+  if (Test-Path -LiteralPath $evidencePath -PathType Leaf) {
+    Write-Host "Evidencia existente preservada; nenhuma aprovacao manual foi criada."
+    return
+  }
+  foreach ($itemId in $manualItemIds) {
+    $item = @($session.items) | Where-Object { $_.id -eq $itemId } | Select-Object -First 1
+    if ($item) {
+      $results.Add((New-ManualEvidenceEntry -Item $item -Status "pending" -Evidence "" -Notes "Nao testado: exige validacao humana em ambiente autorizado."))
+    }
+  }
+  [pscustomobject]@{
+    generatedAt = (Get-Date).ToString("o")
+    computerName = $env:COMPUTERNAME
+    userName = $env:USERNAME
+    candidateName = $session.candidateName
+    version = $session.version
+    mode = "initialize-pending-only"
+    items = @($results.ToArray())
+  } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $evidencePath -Encoding UTF8
+  Write-Host "Checklist inicializado como pendente; nenhum teste funcional aprovado."
+  return
+}
+
 if ($QuickPassAll) {
+  if ([string]$env:HERMES_QA_AUTO_SAFE -eq "1" -or [string]$env:CI -eq "true") {
+    throw "Aprovacao manual em lote bloqueada em execucao automatica. Use -InitializeOnly."
+  }
+  $confirmation = Read-Host "Somente apos testar todos os itens em maquina autorizada, digite VALIDADO para registrar aprovacao"
+  if ($confirmation -cne "VALIDADO") { throw "Validacao humana nao confirmada; nada foi aprovado." }
   foreach ($itemId in $manualItemIds) {
     $item = @($session.items) | Where-Object { $_.id -eq $itemId } | Select-Object -First 1
     if (-not $item) {

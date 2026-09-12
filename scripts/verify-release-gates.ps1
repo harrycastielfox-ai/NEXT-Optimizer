@@ -216,7 +216,9 @@ Assert-True ($manualQaDrop -match 'HERMES_QA_AUTO_SAFE' -and $manualQaDrop -matc
 Assert-True ($manualQaDropReceive -match 'HERMES_QA_ALLOW_WITHOUT_INSTALL_SMOKE') `
   "Recebimento do drop precisa permitir importacao controlada sem install smoke no modo automatico seguro."
 Assert-True ($manualQaDropAuto -match 'qa:manual:drop:zip' -and $manualQaDropAuto -match 'RODAR-QA-HERMES-NA-VM.ps1' -and $manualQaDropAuto -match 'HERMES_QA_AUTO_SAFE' -and $manualQaDropAuto -match 'manual-qa-drop-auto-result') `
-  "Fluxo automatico do drop precisa zipar, validar SHA256, extrair, rodar QuickPassAll em modo seguro e gerar relatorio."
+  "Fluxo automatico do drop precisa zipar, validar SHA256, extrair e gerar relatorio sem aprovar QA manual."
+Assert-True ($manualQaDropAuto -match '"-InitializeOnly"' -and $manualQaDropAuto -notmatch '"-QuickPassAll"') `
+  "Execucao automatica deve apenas inicializar evidencias pendentes, nunca aprovar testes manuais."
 Assert-True ($manualQaDropAuto -match 'build:windows:test' -and $manualQaDropAuto -match 'release:internal') `
   "Fluxo automatico do drop precisa inicializar build/sessao quando rodar em checkout limpo."
 Assert-True ($manualQaDropAuto -match 'AllowInstallSmoke' -and $manualQaDropAuto -match 'Install smoke real exige') `

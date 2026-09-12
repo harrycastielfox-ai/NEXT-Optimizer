@@ -241,6 +241,16 @@ export function QuickPrepareModal({
       if (activeRun.current !== runId) {
         return;
       }
+      if (cancelRequested.current) {
+        try {
+          await finishCancelled({});
+        } catch (saveError) {
+          setRunStatus("cancelled");
+          setCurrentStatus("Preparação cancelada; não foi possível salvar o relatório.");
+          appendLog("error", String(saveError));
+        }
+        return;
+      }
 
       setRunStatus("failed");
       setCurrentStatus("Preparo interrompido.");
