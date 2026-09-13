@@ -23,6 +23,11 @@ begin
   assert not has_function_privilege('anon', 'public.nex_activate_license_session(text,text,text,text,text)', 'EXECUTE');
   assert not has_function_privilege('authenticated', 'public.nex_verify_license_session(text,text)', 'EXECUTE');
   assert not has_function_privilege('service_role', 'public.get_email_device_entitlement(text,text,text)', 'EXECUTE');
+  assert not has_function_privilege('authenticated', 'public.redeem_license_code(text,text,text)', 'EXECUTE');
+  assert not has_function_privilege('authenticated', 'public.get_device_entitlement(text,text)', 'EXECUTE');
+  assert not has_function_privilege('authenticated', 'public.request_device_transfer(text,text)', 'EXECUTE');
+  assert not has_function_privilege('authenticated', 'public.cancel_device_transfer(uuid)', 'EXECUTE');
+  assert has_table_privilege('service_role', 'public.device_transfer_requests', 'SELECT');
   assert not has_table_privilege('anon', 'public.license_sessions', 'SELECT');
   assert not has_table_privilege('authenticated', 'public.license_admin_keys', 'SELECT');
   assert (select bool_and(relrowsecurity) from pg_class where oid in (

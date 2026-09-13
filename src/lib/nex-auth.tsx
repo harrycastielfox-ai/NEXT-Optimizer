@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@supabase/supabase-js";
+import { LICENSE_PUBLISHABLE_KEY, LICENSE_SERVER_URL } from "./license-server";
 import {
   createContext,
   useCallback,
@@ -108,13 +109,16 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 const supabaseUrl = (
-  import.meta.env.VITE_SUPABASE_URL ?? import.meta.env.NEXT_PUBLIC_SUPABASE_URL
+  import.meta.env.VITE_SUPABASE_URL ??
+  import.meta.env.NEXT_PUBLIC_SUPABASE_URL ??
+  LICENSE_SERVER_URL
 )?.trim();
 const supabasePublishableKey = (
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
   import.meta.env.VITE_SUPABASE_ANON_KEY ??
   import.meta.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-  import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+  LICENSE_PUBLISHABLE_KEY
 )?.trim();
 const storeUrl = import.meta.env.VITE_NEX_STORE_URL?.trim();
 

@@ -5,7 +5,7 @@
 mod windows_transport {
     use std::{ffi::c_void, ptr};
 
-    const LICENSE_HOST: &str = "fxdaqobcaisiofquxfmz.supabase.co";
+    const LICENSE_HOST: &str = "dtzyeinqcdjnzefgphcd.supabase.co";
     const LICENSE_PATH: &str = "/functions/v1/nex-license-session";
     const MAX_RESPONSE_BYTES: usize = 32 * 1024;
     type Handle = *mut c_void;
