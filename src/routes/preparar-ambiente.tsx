@@ -57,10 +57,10 @@ type PrepStep = {
 export const Route = createFileRoute("/preparar-ambiente")({
   head: () => ({
     meta: [
-      { title: "NEX Optimizer - Preparar Ambiente" },
+      { title: "NEXT Optimizer - Preparar Ambiente" },
       {
         name: "description",
-        content: "Fluxo guiado do NEX para preparar o ambiente com poucos cliques.",
+        content: "Fluxo guiado do NEXT para preparar o ambiente com poucos cliques.",
       },
     ],
   }),
@@ -125,7 +125,7 @@ function PrepararAmbientePage() {
                 Menos de 4 cliques para resolver
               </h1>
               <p className="mt-2 max-w-4xl text-sm leading-relaxed text-muted-foreground">
-                O NEX mistura diagnóstico, preparação, sessão Gamer e ferramentas sem esconder
+                O NEXT mistura diagnóstico, preparação, sessão Gamer e ferramentas sem esconder
                 risco. Esta tela monta o caminho certo e leva cada ação para o modulo seguro.
               </p>
             </div>
@@ -179,7 +179,7 @@ function PrepararAmbientePage() {
                 </h2>
                 <p className="mt-1 text-[12px] text-muted-foreground">
                   Inspirado no setup em fases, mas com transparencia, modulo certo e rollback do
-                  NEX.
+                  NEXT.
                 </p>
               </div>
               <span className="w-fit rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-bold text-primary">

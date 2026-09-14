@@ -1,18 +1,11 @@
 $ErrorActionPreference = "Stop"
 
 $root = Resolve-Path (Join-Path $PSScriptRoot "..")
+. (Join-Path $PSScriptRoot "get-windows-installer-targets.ps1")
+$tauriConfig = Get-Content -LiteralPath (Join-Path $root "src-tauri\tauri.conf.json") -Raw | ConvertFrom-Json
 $releaseDir = Join-Path $root ".release"
 $reportPath = Join-Path $releaseDir "qa-latest.json"
-$installerTargets = @(
-  [pscustomobject]@{
-    kind = "nsis"
-    path = Join-Path $root "src-tauri\target\release\bundle\nsis\NEX Optimizer_0.1.0_x64-setup.exe"
-  },
-  [pscustomobject]@{
-    kind = "msi"
-    path = Join-Path $root "src-tauri\target\release\bundle\msi\NEX Optimizer_0.1.0_x64_en-US.msi"
-  }
-)
+$installerTargets = @(Get-NextWindowsInstallerTargets -RootPath $root)
 $results = New-Object System.Collections.Generic.List[object]
 
 New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
@@ -65,14 +58,14 @@ try {
   Invoke-QaStep "Safe mode flow" "npm.cmd" @("run", "verify:safe-mode-flow")
   Invoke-QaStep "Build mode sync" "npm.cmd" @("run", "verify:build-mode")
   Invoke-QaStep "TypeScript" "npx.cmd" @("tsc", "--noEmit")
+  Invoke-QaStep "Pure frontend unit tests" "npm.cmd" @("run", "test:unit")
   Invoke-QaStep "Lint" "npm.cmd" @("run", "lint")
   Invoke-QaStep "Build web" "npm.cmd" @("run", "build")
   Invoke-QaStep "Build Tauri frontend" "npm.cmd" @("run", "build:tauri")
   Invoke-QaStep "Cargo check" "cargo.exe" @("check", "--manifest-path", "src-tauri\Cargo.toml")
-  Invoke-QaStep "Cargo test" "cargo.exe" @(
-    "test",
-    "--lib",
-    "--manifest-path", "src-tauri\Cargo.toml"
+  Invoke-QaStep "Audited Cargo unit tests" "powershell.exe" @(
+    "-NoProfile",
+    "-File", (Join-Path $PSScriptRoot "test-rust-unit-safe.ps1")
   )
 } finally {
   Pop-Location
@@ -112,7 +105,7 @@ $signatureValid = -not ($installerReports | Where-Object { $_.signatureStatus -n
 $stepResults = @($results | ForEach-Object { $_ })
 $report = [pscustomobject]@{
   generatedAt     = (Get-Date).ToString("o")
-  version         = "0.1.0"
+  version         = [string]$tauriConfig.version
   technicalPass   = $technicalPass
   releaseReady    = ($technicalPass -and $installersFound -and $signatureValid)
   installers      = $installerReports

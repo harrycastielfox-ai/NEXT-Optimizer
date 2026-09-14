@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import {
   BadgeCheck,
   CalendarDays,
@@ -25,15 +25,14 @@ import {
 export const Route = createFileRoute("/conta")({
   head: () => ({
     meta: [
-      { title: "NEX Optimizer - Minha conta" },
-      { name: "description", content: "Conta, código de acesso e assinatura NEX Optimizer." },
+      { title: "NEXT - Minha conta" },
+      { name: "description", content: "Conta, código de acesso e assinatura NEXT." },
     ],
   }),
   component: AccountPage,
 });
 
 function AccountPage() {
-  const navigate = useNavigate();
   const {
     configured,
     loading,
@@ -42,7 +41,6 @@ function AccountPage() {
     deviceIdentity,
     deviceAccess,
     error,
-    signOut,
     redeemCode,
     refreshEntitlement,
     clearError,
@@ -98,15 +96,14 @@ function AccountPage() {
 
   async function handleBuy() {
     if (!storeUrl) {
-      setNotice("A loja será conectada assim que o endereço oficial do site NEX for definido.");
+      setNotice("A loja será conectada assim que o endereço oficial do site NEXT for definido.");
       return;
     }
     await openNexExternalUrl(storeUrl);
   }
 
   async function handleRevalidateAccess() {
-    await signOut();
-    await navigate({ to: "/" });
+    await refreshEntitlement({ force: true });
   }
 
   return (
@@ -117,14 +114,15 @@ function AccountPage() {
           <header className="flex flex-col gap-4 border-b border-border/60 pb-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-[11px] font-black uppercase tracking-[0.22em] text-primary">
-                NEX ID
+                NEXT ID
               </p>
               <h1 className="mt-2 text-[clamp(27px,2.4vw,38px)] font-black tracking-tight text-foreground">
                 Minha conta
               </h1>
               <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                Ative com e-mail e código de acesso. Depois da primeira ativação, o NEX entra
-                automaticamente neste computador.
+                Ative com e-mail e código de acesso. Depois da primeira ativação, o NEXT entra
+                automaticamente neste computador enquanto a sessão estiver válida. Guarde o código
+                original para reativar.
               </p>
             </div>
             <button
@@ -164,7 +162,7 @@ function AccountPage() {
                   <UserRound className="h-5 w-5" />
                 </span>
                 <div>
-                  <h2 className="text-lg font-black text-foreground">Identidade NEX</h2>
+                  <h2 className="text-lg font-black text-foreground">Identidade NEXT</h2>
                   <p className="mt-1 text-sm text-muted-foreground">
                     Sua compra e seus códigos ficam vinculados ao e-mail e ao primeiro computador
                     ativado.
@@ -207,7 +205,8 @@ function AccountPage() {
                           Computador vinculado
                         </p>
                         <p className="mt-0.5 truncate text-sm text-muted-foreground">
-                          {deviceIdentity.label}. O NEX envia apenas um hash da máquina.
+                          {deviceIdentity.label}. A identidade da máquina é enviada como hash, junto
+                          aos dados de ativação.
                         </p>
                       </div>
                     </div>
@@ -278,7 +277,7 @@ function AccountPage() {
                   <div>
                     <h2 className="text-lg font-black text-foreground">Seu acesso</h2>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Status confirmado pelo servidor NEX.
+                      Status confirmado pelo servidor NEXT.
                     </p>
                   </div>
                 </div>
@@ -304,7 +303,7 @@ function AccountPage() {
                 <StatusBox
                   tone="warning"
                   title="Verificação indisponível"
-                  text="O NEX mantém as otimizações bloqueadas até confirmar a licença e este computador."
+                  text="O NEXT mantém as otimizações bloqueadas até confirmar a licença e este computador."
                 />
               ) : entitlement ? (
                 <div className="mt-6">
@@ -349,11 +348,20 @@ function AccountPage() {
             </section>
           </div>
 
+          <section className="mt-5 rounded-2xl border border-border/70 bg-card/80 p-5">
+            <h2 className="font-black text-foreground">Troca de computador e recuperação</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              A troca é feita pelo suporte após verificar a compra e a titularidade. Tenha o número
+              do pedido e o código original em mãos. Não envie o código em canais públicos. Informar
+              apenas o e-mail não autoriza a troca.
+            </p>
+          </section>
+
           <section className="mt-5">
             <div className="flex items-end justify-between gap-4">
               <div>
                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-primary">
-                  Planos NEX
+                  Planos NEXT
                 </p>
                 <h2 className="mt-1 text-xl font-black text-foreground">
                   Mais tempo, melhor valor

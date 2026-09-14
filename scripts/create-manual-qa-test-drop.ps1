@@ -145,7 +145,8 @@ if (-not (Test-Path -LiteralPath (Join-Path $dropExtractRoot "VERIFY-QA-PACKAGE.
 $vmRunnerPath = Join-Path $dropRoot "RODAR-QA-HERMES-NA-VM.ps1"
 $vmRunner = @"
 param(
-  [switch]`$QuickPassAll
+  [switch]`$QuickPassAll,
+  [switch]`$InitializeOnly
 )
 
 `$ErrorActionPreference = "Stop"
@@ -182,7 +183,9 @@ try {
   } else {
     powershell -NoProfile -ExecutionPolicy Bypass -File .\RUN-INSTALL-SMOKE.ps1
   }
-  if (`$QuickPassAll) {
+  if (`$InitializeOnly -or `$autoSafeMode) {
+    powershell -NoProfile -ExecutionPolicy Bypass -File .\RUN-MANUAL-QA-EVIDENCE.ps1 -InitializeOnly
+  } elseif (`$QuickPassAll) {
     powershell -NoProfile -ExecutionPolicy Bypass -File .\RUN-MANUAL-QA-QUICK-PASS.ps1
   } else {
     powershell -NoProfile -ExecutionPolicy Bypass -File .\RUN-MANUAL-QA-EVIDENCE.ps1

@@ -353,6 +353,7 @@ pub(crate) fn gamer_engine_apply_blocking(
     if !dry_run && !request.confirmed {
         return Err("Confirmacao obrigatoria antes de ativar a Gamer Engine.".to_string());
     }
+    crate::licensing::require_real_license(dry_run)?;
 
     let report = collect_gamer_report_with_app(Some(&app));
     let selected_profile = select_game_profile(&report, request.game_profile_id.as_deref());
@@ -367,7 +368,7 @@ pub(crate) fn gamer_engine_apply_blocking(
         include_performance_profile,
         dry_run,
     );
-    let snapshot = restore::restore_create_snapshot(app.clone(), Some(snapshot_request))?;
+    let snapshot = restore::create_snapshot(app.clone(), Some(snapshot_request))?;
 
     append_gamer_event(
         &app,

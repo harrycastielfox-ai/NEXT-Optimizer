@@ -18,9 +18,21 @@ const files = {
   verification: read("src", "lib", "execution-verification.ts"),
   advanced: read("src", "lib", "advanced.ts"),
   clean: read("src", "lib", "clean.ts"),
+  executionOutcome: read("src", "lib", "execution-outcome.ts"),
 };
 
 const checks = [
+  {
+    name: "Simulacao bem sucedida dispensa reinicio sem liberar execucao real ou incompleta",
+    ok:
+      files.executionOutcome.includes('if (safeMode) return "confirmed"') &&
+      files.executionOutcome.includes("gate.hasIssues !== false || gate.safeMode !== safeMode") &&
+      files.executionOutcome.indexOf("gate.hasIssues !== false") <
+        files.executionOutcome.indexOf('if (safeMode) return "confirmed"') &&
+      files.quickPrepareModal.includes(
+        'runStatus === "completed" && !hasIssues && !HERMES_SAFE_TEST_MODE',
+      ),
+  },
   {
     name: "Modo seguro do frontend continua ligado por padrao",
     ok:

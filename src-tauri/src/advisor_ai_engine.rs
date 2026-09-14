@@ -209,7 +209,7 @@ pub async fn advisor_ai_engine_analyze(app: AppHandle) -> Result<AdvisorAiReport
         build_report(context)
     })
     .await
-    .map_err(|err| format!("Falha ao analisar NEX AI em segundo plano: {err}"))
+    .map_err(|err| format!("Falha ao analisar NEX Insight em segundo plano: {err}"))
 }
 
 fn collect_context(app: &AppHandle) -> AdvisorAiContext {
@@ -263,7 +263,7 @@ fn collect_context(app: &AppHandle) -> AdvisorAiContext {
                 "Perfis NEX",
                 AdvisorAiSourceStatus::Available,
                 AdvisorAiConfidence::High,
-                "Catalogo local de perfis oficiais. Nenhum perfil e aplicado pela NEX AI.",
+                "Catalogo local de perfis oficiais. Nenhum perfil e aplicado pela NEX Insight.",
                 Vec::new(),
             ),
         },
@@ -304,7 +304,7 @@ where
                 label,
                 AdvisorAiSourceStatus::Unavailable,
                 AdvisorAiConfidence::Low,
-                "Indisponivel: a engine retornou fallback demonstrativo, entao a NEX AI ignorou esses valores para nao inventar dados.",
+                "Indisponivel: a engine retornou fallback demonstrativo, entao a NEX Insight ignorou esses valores para nao inventar dados.",
                 warnings,
             ),
         }
@@ -400,7 +400,7 @@ fn build_report(context: AdvisorAiContext) -> AdvisorAiReport {
             "Tudo local/offline: nenhum dado e enviado para nuvem.".to_string(),
             "Sem chatbot e sem dependencia obrigatoria de modelos externos.".to_string(),
             "Valores de fallback demonstrativo sao marcados como indisponiveis.".to_string(),
-            "A NEX AI recomenda; o usuario decide e qualquer aplicacao continua exigindo confirmacao.".to_string(),
+            "A NEX Insight recomenda; o usuario decide e qualquer aplicacao continua exigindo confirmacao.".to_string(),
         ],
     }
 }
@@ -689,7 +689,7 @@ fn build_recommendations(
         recommendations.push(recommendation(
             "review-startup",
             "Revisar inicializacao",
-            "Usar a Startup Engine para revisar apps de alto impacto. A NEX AI nao remove nem desativa nada automaticamente.",
+            "Usar a Startup Engine para revisar apps de alto impacto. A NEX Insight nao remove nem desativa nada automaticamente.",
             highest_severity_for(findings, AdvisorAiCategory::Startup),
             AdvisorAiCategory::Startup,
             None,
@@ -1083,7 +1083,7 @@ fn read_latest_benchmark(app: &AppHandle) -> SourceData<benchmark::BenchmarkRepo
                     "Benchmark Engine",
                     AdvisorAiSourceStatus::Available,
                     AdvisorAiConfidence::High,
-                    "Ultimo benchmark local encontrado no historico. A NEX AI nao executou novo benchmark.",
+                    "Ultimo benchmark local encontrado no historico. A NEX Insight nao executou novo benchmark.",
                     Vec::new(),
                 ),
             },

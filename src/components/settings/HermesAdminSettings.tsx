@@ -98,64 +98,15 @@ export function HermesAdminSettings() {
           title={t("settings.updates.title")}
           description={t("settings.updates.description")}
         >
-          <ToggleRow
-            icon={CheckCircle2}
-            title={t("settings.updates.autoCheck.title")}
-            description={t("settings.updates.autoCheck.description")}
-            checked={preferences.updates.autoCheck}
-            onCheckedChange={(checked) =>
-              savePreference((current) => ({
-                ...current,
-                updates: { ...current.updates, autoCheck: checked },
-              }))
-            }
-          />
-          <ToggleRow
-            icon={Download}
-            title={t("settings.updates.autoDownload.title")}
-            description={t("settings.updates.autoDownload.description")}
-            checked={preferences.updates.autoDownload}
-            onCheckedChange={(checked) =>
-              savePreference((current) => ({
-                ...current,
-                updates: { ...current.updates, autoDownload: checked },
-              }))
-            }
-          />
-          <SegmentedControl
-            label={t("settings.updates.channel")}
-            value={preferences.updates.channel}
-            options={[
-              {
-                value: "stable",
-                label: t("settings.option.stable"),
-                description: t("settings.option.recommended"),
-              },
-              {
-                value: "beta",
-                label: t("settings.option.beta"),
-                description: t("settings.option.future"),
-              },
-            ]}
-            onChange={(channel) =>
-              savePreference((current) => ({
-                ...current,
-                updates: { ...current.updates, channel },
-              }))
-            }
-          />
-          <ToggleRow
-            icon={FileKey2}
-            title={t("settings.updates.history.title")}
-            description={t("settings.updates.history.description")}
-            checked={preferences.updates.versionHistory}
-            onCheckedChange={(checked) =>
-              savePreference((current) => ({
-                ...current,
-                updates: { ...current.updates, versionHistory: checked },
-              }))
-            }
-          />
+          <a
+            href="https://github.com/harrycastielfox-ai/NEXT-Optimizer/releases"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex min-h-12 items-center gap-3 rounded-xl border border-primary/25 bg-primary/10 px-4 py-3 text-sm font-bold text-foreground hover:bg-primary/15"
+          >
+            <Download className="h-5 w-5 text-primary" />
+            {t("settings.updates.history.title")} — GitHub
+          </a>
         </SettingsPanel>
 
         <SettingsPanel

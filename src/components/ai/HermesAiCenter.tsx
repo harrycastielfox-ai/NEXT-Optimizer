@@ -79,10 +79,10 @@ export function HermesAiCenter() {
             <BrainCircuit className="h-6 w-6" />
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] font-bold tracking-[0.22em] text-primary">NEX AI</p>
-            <h2 className="mt-1 text-lg font-bold text-foreground">Centro de Inteligencia NEX</h2>
+            <p className="text-[11px] font-bold tracking-[0.22em] text-primary">NEXT Insight</p>
+            <h2 className="mt-1 text-lg font-bold text-foreground">Centro de Inteligencia NEXT</h2>
             <p className="mt-1 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-              Análise local, offline e somente leitura. A NEX AI explica gargalos e recomenda
+              Análise local, offline e somente leitura. A NEXT Insight explica gargalos e recomenda
               proximos passos, sem aplicar nada automaticamente.
             </p>
           </div>
@@ -167,7 +167,7 @@ export function HermesAiCenter() {
           <InsightPanel
             title="Problemas Detectados"
             emptyTitle="Nenhum problema crítico"
-            emptySub="A NEX AI não detectou gargalos com as fontes atuais."
+            emptySub="A NEXT Insight não detectou gargalos com as fontes atuais."
             items={topFindings}
             renderItem={(item) => <FindingRow key={item.id} item={item} sources={report.sources} />}
           />
@@ -188,7 +188,7 @@ export function HermesAiCenter() {
           <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h3 className="text-[12px] font-bold tracking-[0.18em] text-primary">
-                PLANO DE AÇÃO NEX
+                PLANO DE AÇÃO NEXT
               </h3>
               <p className="mt-1 text-[12px] text-muted-foreground">
                 Recomendação textual. Nenhuma etapa e executada automaticamente.

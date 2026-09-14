@@ -234,7 +234,7 @@ create or replace function public.get_email_device_entitlement(
 )
 returns table (
   account_id uuid,
-  requested_email text,
+  account_email text,
   access_allowed boolean,
   access_reason text,
   license_plan_id text,

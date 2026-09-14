@@ -34,6 +34,7 @@ import {
 import { verifyExecutionActions } from "@/lib/execution-verification";
 import { publishNexOptimizationState } from "@/lib/nex-companion";
 import type { NexOptimizationStatus, NexOptimizationStepStatus } from "@/types/nex-companion";
+import { hasExecutionIssues } from "@/lib/execution-outcome";
 
 type RunStatus = "idle" | "running" | "completed" | "failed" | "cancelled";
 type PhaseStatus = "pending" | "running" | "completed" | "unavailable" | "cancelled";
@@ -131,15 +132,16 @@ export function QuickPrepareModal({
     phases.find((item) => item.status === "running") ??
     phases.find((item) => item.status === "pending");
   const canCancel = runStatus === "running" && !cancelRequested.current;
-  const canClose = runStatus !== "running" || cancelRequested.current;
+  const canClose = runStatus !== "running";
   const dnsProvider = getDnsProvider(dnsProviderId);
+  const hasIssues = finalExecutionReport ? hasExecutionIssues(finalExecutionReport) : false;
 
   useEffect(() => {
     if (!open) {
       return;
     }
 
-    const status = mapRunStatus(runStatus);
+    const status = runStatus === "completed" && hasIssues ? "error" : mapRunStatus(runStatus);
     const companionSteps = phases.map((item) => ({
       id: item.id,
       title: item.title,
@@ -152,10 +154,14 @@ export function QuickPrepareModal({
       phase: "prepare",
       isRunning: status === "running" || status === "paused",
       progress: runStatus === "completed" ? 100 : progress,
-      currentStep: runStatus === "completed" ? "Preparação concluída" : currentStatus,
+      currentStep: currentStatus,
       currentDetail:
         runStatus === "completed"
-          ? "Reinicie o computador para liberar a Etapa 2."
+          ? hasIssues
+            ? "Há pendências. Consulte o relatório e repita a preparação."
+            : HERMES_SAFE_TEST_MODE
+              ? "Simulação concluída. A segunda etapa pode ser simulada sem reiniciar."
+              : "Salve seu trabalho e reinicie quando estiver pronto."
           : activePhase?.subtitle,
       startedAt: companionStartedAt.current,
       updatedAt: Date.now(),
@@ -167,9 +173,9 @@ export function QuickPrepareModal({
         .map((item) => item.title),
       steps: companionSteps,
       status,
-      errorMessage: runStatus === "failed" ? currentStatus : undefined,
+      errorMessage: runStatus === "failed" || hasIssues ? currentStatus : undefined,
     });
-  }, [activePhase?.subtitle, currentStatus, open, phases, progress, runStatus]);
+  }, [activePhase?.subtitle, currentStatus, hasIssues, open, phases, progress, runStatus]);
 
   async function runPrepare(runId: number) {
     try {
@@ -182,7 +188,8 @@ export function QuickPrepareModal({
         },
       );
 
-      if (activeRun.current !== runId) {
+      if (shouldStop(runId)) {
+        if (activeRun.current === runId) await finishCancelled(nextReports);
         return;
       }
 
@@ -193,38 +200,113 @@ export function QuickPrepareModal({
       );
       reportActions.current = verifiedActions;
 
-      if (activeRun.current !== runId) {
+      if (shouldStop(runId)) {
+        if (activeRun.current === runId) await finishCancelled(nextReports);
         return;
       }
 
+      const hadUnavailableSteps = Object.values(phaseHasUnavailable.current).some(Boolean);
       const executionReport = buildExecutionReport({
         phase: "prepare",
         title: "Preparação da Máquina",
         safeMode: HERMES_SAFE_TEST_MODE,
         actions: verifiedActions,
         notes: [
-          "Botão 1 concluído antes da Fase 2.",
+          "Resultado da execução do Botão 1.",
           HERMES_SAFE_TEST_MODE
             ? "Modo teste: nenhuma alteração real foi aplicada."
             : "Modo real: ajustes implementados foram executados.",
+          ...(hadUnavailableSteps
+            ? ["Um ou mais itens ficaram indisponíveis durante a preparação - veja o log acima."]
+            : []),
         ],
       });
+      const incomplete = hasExecutionIssues(executionReport);
       setFinalExecutionReport(executionReport);
       setCurrentStatus("Salvando conclusão da Fase 1.");
       await onCompleted?.(nextReports, executionReport);
       setRunStatus("completed");
-      setCurrentStatus("Preparo concluído. Reinício automático preparado.");
+      setCurrentStatus(
+        incomplete
+          ? "Preparação com pendências. Confira o relatório e tente novamente."
+          : HERMES_SAFE_TEST_MODE
+            ? "Simulação concluída. Nenhum reinício necessário."
+            : "Preparo concluído. Reinicie quando estiver pronto.",
+      );
       appendLog("info", "Preparar PC finalizado.");
-      appendLog("warning", "Reinício recomendado antes de executar Otimizar Tudo.");
+      if (!incomplete && !HERMES_SAFE_TEST_MODE) {
+        appendLog("warning", "Reinício recomendado antes de executar Otimizar Tudo.");
+      }
     } catch (error) {
       if (activeRun.current !== runId) {
+        return;
+      }
+      if (cancelRequested.current) {
+        try {
+          await finishCancelled({});
+        } catch (saveError) {
+          setRunStatus("cancelled");
+          setCurrentStatus("Preparação cancelada; não foi possível salvar o relatório.");
+          appendLog("error", String(saveError));
+        }
         return;
       }
 
       setRunStatus("failed");
       setCurrentStatus("Preparo interrompido.");
       appendLog("error", error instanceof Error ? error.message : String(error));
+      const partialReport = buildExecutionReport({
+        phase: "prepare",
+        title: "Preparação interrompida",
+        safeMode: HERMES_SAFE_TEST_MODE,
+        actions: [
+          ...reportActions.current,
+          {
+            id: "prepare-interrupted",
+            title: "Execução interrompida",
+            detail: "Consulte as ações anteriores e a recuperação antes de tentar novamente.",
+            phase: "prepare",
+            status: "failed",
+            outputs: [error instanceof Error ? error.message : String(error)],
+            plannedCount: 1,
+          },
+        ],
+        notes: [
+          "Algumas ações anteriores podem ter sido aplicadas. Consulte Segurança e Recuperação.",
+        ],
+      });
+      setFinalExecutionReport(partialReport);
+      try {
+        await onCompleted?.({}, partialReport);
+      } catch (saveError) {
+        appendLog("error", `Não foi possível salvar o relatório: ${String(saveError)}`);
+      }
     }
+  }
+
+  async function finishCancelled(nextReports: QuickPrepareReports) {
+    const partialReport = buildExecutionReport({
+      phase: "prepare",
+      title: "Preparação cancelada",
+      safeMode: HERMES_SAFE_TEST_MODE,
+      actions: [
+        ...reportActions.current,
+        {
+          id: "prepare-cancelled",
+          title: "Execução cancelada",
+          phase: "prepare",
+          detail: "Cancelamento não desfaz as ações já executadas.",
+          status: "cancelled",
+          outputs: [],
+          plannedCount: 1,
+        },
+      ],
+      notes: ["Ações anteriores podem ter sido aplicadas. Consulte Segurança e Recuperação."],
+    });
+    setFinalExecutionReport(partialReport);
+    await onCompleted?.(nextReports, partialReport);
+    setRunStatus("cancelled");
+    setCurrentStatus("Preparação cancelada. O relatório parcial foi preservado.");
   }
 
   function handleTaskStart(runId: number, update: QuickPrepareTaskUpdate) {
@@ -303,8 +385,7 @@ export function QuickPrepareModal({
 
   function requestCancel() {
     cancelRequested.current = true;
-    setRunStatus("cancelled");
-    setCurrentStatus("Cancelamento solicitado.");
+    setCurrentStatus("Cancelamento solicitado. Aguardando a ação atual terminar.");
     setPhases((current) =>
       current.map((item) =>
         item.status === "pending"
@@ -322,7 +403,6 @@ export function QuickPrepareModal({
     if (!cancelRequested.current) {
       return false;
     }
-    setRunStatus("cancelled");
     return true;
   }
 
@@ -333,9 +413,8 @@ export function QuickPrepareModal({
   }
 
   function appendLog(level: LogItem["level"], message: string) {
-    setLogs((current) =>
-      [{ id: `${Date.now()}-${current.length}`, level, message }, ...current].slice(0, 7),
-    );
+    const id = crypto.randomUUID();
+    setLogs((current) => [{ id, level, message }, ...current].slice(0, 7));
   }
 
   if (!open) {
@@ -370,12 +449,12 @@ export function QuickPrepareModal({
           </button>
         </header>
 
-        <div className="px-5 py-5 lg:px-6">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 lg:px-6">
           <section className="mx-auto flex max-w-3xl flex-col items-center py-4 text-center">
             <span className="grid h-14 w-14 place-items-center rounded-2xl bg-primary/12 text-primary">
-              {runStatus === "completed" ? (
+              {runStatus === "completed" && !hasIssues ? (
                 <CheckCircle2 className="h-7 w-7" />
-              ) : runStatus === "failed" || runStatus === "cancelled" ? (
+              ) : runStatus === "failed" || runStatus === "cancelled" || hasIssues ? (
                 <AlertTriangle className="h-7 w-7" />
               ) : (
                 <Loader2 className="h-7 w-7 animate-spin" />
@@ -387,7 +466,9 @@ export function QuickPrepareModal({
             <h3 className="mt-2 text-xl font-black text-foreground">{currentStatus}</h3>
             <p className="mt-1 text-sm text-muted-foreground">
               {runStatus === "completed"
-                ? "A Fase 1 foi concluída."
+                ? hasIssues
+                  ? "A segunda etapa permanece bloqueada."
+                  : "A Fase 1 foi concluída."
                 : `${activePhase?.title ?? "Finalizando"} · ${progress}% concluído`}
             </p>
             <div className="mt-5 h-3 w-full overflow-hidden rounded-full bg-muted">
@@ -403,15 +484,18 @@ export function QuickPrepareModal({
             </div>
           </section>
 
-          <div className="hidden">
+          <details className="mt-4">
+            <summary className="cursor-pointer text-sm font-bold text-primary">
+              Ver etapas, resultados e relatório
+            </summary>
             <div className="mb-4 rounded-2xl border border-warning/25 bg-warning/10 px-4 py-3 text-warning">
               <div className="flex items-start gap-2">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                 <div>
                   <p className="text-sm font-bold">
                     {HERMES_SAFE_TEST_MODE
-                      ? "Modo teste ativo: o NEX valida o que faria sem alterar o Windows."
-                      : "Modo real: o NEX executa os ajustes implementados."}
+                      ? "Modo teste ativo: o NEXT valida o que faria sem alterar o Windows."
+                      : "Modo real: o NEXT executa os ajustes implementados."}
                   </p>
                   <p className="mt-1 text-[12px] leading-relaxed">
                     Este fluxo usa CMD/PowerShell/Registro allowlistados por baixo: Game Mode,
@@ -525,10 +609,10 @@ export function QuickPrepareModal({
                 </div>
               </aside>
             </div>
-          </div>
+          </details>
         </div>
 
-        {runStatus === "completed" && (
+        {runStatus === "completed" && !hasIssues && !HERMES_SAFE_TEST_MODE && (
           <div className="border-t border-border/70 bg-background/78 px-5 py-4 lg:px-6">
             <RestartPrompt phase="prepare" />
           </div>
@@ -538,7 +622,7 @@ export function QuickPrepareModal({
           <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
             <ShieldCheck className="h-4 w-4 text-success" />
             {HERMES_SAFE_TEST_MODE
-              ? "Modo teste: ao terminar, reinicie antes do Botão 2."
+              ? "Modo teste: nenhuma alteração real ou reinício."
               : "Modo real: reinicie o PC antes de executar o Botão 2."}
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
@@ -628,9 +712,9 @@ function PreparePhaseCard({ phase }: { phase: PreparePhase }) {
           </div>
           {phase.outputs.length > 0 && (
             <div className="mt-3 space-y-1.5">
-              {phase.outputs.slice(0, 3).map((output) => (
+              {phase.outputs.slice(0, 3).map((output, index) => (
                 <p
-                  key={output}
+                  key={`${phase.id}-${index}`}
                   className="rounded-lg border border-border/60 bg-muted/45 px-2.5 py-1.5 text-[11px] font-medium text-foreground"
                 >
                   {output}
@@ -645,6 +729,7 @@ function PreparePhaseCard({ phase }: { phase: PreparePhase }) {
 }
 
 function PrepareSuccessPanel({ report }: { report: ExecutionReport }) {
+  const hasIssues = hasExecutionIssues(report);
   return (
     <section className="overflow-hidden rounded-2xl border border-success/25 bg-success/10">
       <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
@@ -654,13 +739,17 @@ function PrepareSuccessPanel({ report }: { report: ExecutionReport }) {
           </span>
           <div className="min-w-0">
             <p className="text-[11px] font-black uppercase tracking-[0.18em] text-success">
-              Sucesso
+              {hasIssues ? "Pendências" : report.safeMode ? "Simulação" : "Resultado"}
             </p>
-            <h3 className="mt-1 text-xl font-black text-foreground">Preparo concluído</h3>
+            <h3 className="mt-1 text-xl font-black text-foreground">
+              {hasIssues ? "Preparação incompleta" : "Preparo concluído"}
+            </h3>
             <p className="mt-1 text-sm font-medium text-muted-foreground">
-              {report.safeMode
-                ? "Modo teste validado. Reinicie o PC antes de seguir para o Botão 2."
-                : "Base do PC preparada com sucesso. Reinicie antes de executar o Botão 2."}
+              {hasIssues
+                ? "Consulte as falhas no relatório. Resolva as pendências antes de avançar."
+                : report.safeMode
+                  ? "Simulação concluída. A segunda etapa de teste dispensa reinício."
+                  : "Base do PC preparada com sucesso. Reinicie antes de executar o Botão 2."}
             </p>
           </div>
         </div>
@@ -670,7 +759,9 @@ function PrepareSuccessPanel({ report }: { report: ExecutionReport }) {
             <span className="block text-[9px] font-bold uppercase tracking-[0.12em] text-success">
               Base
             </span>
-            <span className="block text-sm font-black text-foreground">Pronta</span>
+            <span className="block text-sm font-black text-foreground">
+              {hasIssues ? "Incompleta" : "Pronta"}
+            </span>
           </span>
           <span className="rounded-xl border border-primary/20 bg-primary/10 px-3 py-2">
             <span className="block text-[9px] font-bold uppercase tracking-[0.12em] text-primary">
@@ -702,7 +793,7 @@ function GamerDependenciesPanel({ report }: { report: GamerDependencyVerificatio
               Dependências gamer verificadas
             </h3>
             <p className="mt-1 text-[12px] text-muted-foreground">
-              O NEX cuida dos runtimes dentro dos botões principais, sem etapa manual.
+              O NEXT cuida dos runtimes dentro dos botões principais, sem etapa manual.
             </p>
           </div>
         </div>

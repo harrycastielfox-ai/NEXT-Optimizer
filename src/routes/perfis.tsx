@@ -39,8 +39,8 @@ export const Route = createFileRoute("/perfis")({
   }),
   head: () => ({
     meta: [
-      { title: "NEX Optimizer - Perfis" },
-      { name: "description", content: "Perfis locais do NEX Optimizer." },
+      { title: "NEXT Optimizer - Perfis" },
+      { name: "description", content: "Perfis locais do NEXT Optimizer." },
     ],
   }),
   component: PerfisPage,
@@ -161,7 +161,7 @@ function PerfisPage() {
 
     if (!dryRun && !HERMES_SAFE_TEST_MODE) {
       const confirmed = window.confirm(
-        "Ativar Modo Gamer NEX? Um ponto de segurança será criado antes e os apps sugeridos serão fechados de forma graciosa.",
+        "Ativar Modo Gamer NEXT? Um ponto de segurança será criado antes e os apps sugeridos serão fechados de forma graciosa.",
       );
       if (!confirmed) {
         return;
@@ -192,7 +192,7 @@ function PerfisPage() {
       <div className="flex-1 flex flex-col min-w-0">
         <main className="flex-1 px-5 pt-6 pb-4 overflow-auto xl:px-8 xl:pt-7">
           <div className="mb-6">
-            <p className="text-xs font-bold tracking-[0.22em] text-primary mb-2">PERFIS NEX</p>
+            <p className="text-xs font-bold tracking-[0.22em] text-primary mb-2">PERFIS NEXT</p>
             <h1 className="text-[clamp(26px,2vw,32px)] leading-tight font-bold tracking-tight text-foreground">
               Perfis
             </h1>
@@ -332,7 +332,7 @@ function GamerEnginePanel({
     <section className="mt-4 rounded-2xl bg-card border border-border/60 p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(15,23,42,0.08)]">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h2 className="text-sm font-bold tracking-[0.18em] text-primary">MODO GAMER NEX</h2>
+          <h2 className="text-sm font-bold tracking-[0.18em] text-primary">MODO GAMER NEXT</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Analisa jogos, sobreposicoes e apps em segundo plano. Fechamento real sempre exige
             confirmação.

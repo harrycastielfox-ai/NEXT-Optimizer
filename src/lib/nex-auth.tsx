@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@supabase/supabase-js";
+import { LICENSE_PUBLISHABLE_KEY, LICENSE_SERVER_URL } from "./license-server";
 import {
   createContext,
   useCallback,
@@ -7,6 +8,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  useRef,
   type ReactNode,
 } from "react";
 
@@ -59,15 +61,6 @@ export type NexDeviceAccess =
   | "blocked"
   | "unavailable";
 
-export type NexDeviceTransfer = {
-  id: string;
-  status: "pending" | "approved" | "rejected" | "cancelled" | "expired";
-  requestedDeviceLabel: string;
-  requestedAt: string;
-  reviewedAt: string | null;
-  reviewNote: string | null;
-};
-
 export const NEX_PLANS: NexPlan[] = [
   { id: "15_days", name: "15 dias", durationDays: 15, priceCents: 1729 },
   { id: "30_days", name: "30 dias", durationDays: 30, priceCents: 3458 },
@@ -103,15 +96,12 @@ type AuthContextValue = {
   entitlement: NexEntitlement | null;
   deviceIdentity: NexDeviceIdentity | null;
   deviceAccess: NexDeviceAccess;
-  deviceTransfer: NexDeviceTransfer | null;
   error: string | null;
   activateWithEmailCode: (email: string, code: string) => Promise<NexEntitlement>;
   verifyEmailAccess: (email: string) => Promise<NexEntitlement>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   redeemCode: (code: string, email?: string) => Promise<NexEntitlement>;
-  requestDeviceTransfer: () => Promise<NexDeviceTransfer>;
-  cancelDeviceTransfer: () => Promise<void>;
   refreshEntitlement: (options?: { force?: boolean }) => Promise<void>;
   clearError: () => void;
 };
@@ -119,25 +109,26 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 const supabaseUrl = (
-  import.meta.env.VITE_SUPABASE_URL ?? import.meta.env.NEXT_PUBLIC_SUPABASE_URL
+  import.meta.env.VITE_SUPABASE_URL ??
+  import.meta.env.NEXT_PUBLIC_SUPABASE_URL ??
+  LICENSE_SERVER_URL
 )?.trim();
 const supabasePublishableKey = (
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
   import.meta.env.VITE_SUPABASE_ANON_KEY ??
   import.meta.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-  import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+  LICENSE_PUBLISHABLE_KEY
 )?.trim();
 const storeUrl = import.meta.env.VITE_NEX_STORE_URL?.trim();
 
 let browserClient: SupabaseClient | null = null;
 let deviceIdentityPromise: Promise<NexDeviceIdentity> | null = null;
-
-const BROWSER_DEVICE_STORAGE_KEY = "nex.auth.development-device.v1";
 const LICENSE_SESSION_STORAGE_KEY = "nex.auth.email-license-session.v1";
 const LICENSE_REMEMBERED_EMAIL_STORAGE_KEY = "nex.auth.remembered-email.v1";
-const LICENSE_BACKGROUND_REFRESH_GRACE_MS = 10 * 60 * 1000;
 
 export function isNexAuthConfigured() {
+  if (isTauriRuntime()) return true;
   const hasRealProjectUrl = Boolean(
     supabaseUrl &&
     /^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(supabaseUrl) &&
@@ -153,7 +144,7 @@ export function isNexAuthConfigured() {
 }
 
 function getSupabaseClient() {
-  if (!isNexAuthConfigured() || typeof window === "undefined") {
+  if (!supabaseUrl || !supabasePublishableKey || typeof window === "undefined") {
     return null;
   }
 
@@ -220,78 +211,19 @@ export async function invokeNexLicenseAdmin<T = Record<string, unknown>>(
   return data as T;
 }
 
-async function sha256Hex(value: string) {
-  const bytes = new TextEncoder().encode(value);
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
-async function createBrowserDevelopmentIdentity(): Promise<NexDeviceIdentity> {
-  let installationId = window.localStorage.getItem(BROWSER_DEVICE_STORAGE_KEY);
-  if (!installationId) {
-    installationId = crypto.randomUUID();
-    window.localStorage.setItem(BROWSER_DEVICE_STORAGE_KEY, installationId);
-  }
-
-  return {
-    fingerprint: await sha256Hex(`nex-optimizer-browser-development-v1:${installationId}`),
-    label: "Navegador de desenvolvimento",
-    source: "browser-installation-sha256",
-  };
-}
-
-async function getDeviceIdentity() {
-  if (!isTauriRuntime() && !import.meta.env.DEV) {
-    throw new Error("DEVICE_IDENTITY_APP_REQUIRED");
-  }
-
-  if (!deviceIdentityPromise) {
-    deviceIdentityPromise = isTauriRuntime()
-      ? import("@tauri-apps/api/core").then(({ invoke }) =>
-          invoke<NexDeviceIdentity>("nex_device_identity"),
-        )
-      : createBrowserDevelopmentIdentity();
-  }
-
+async function getDeviceIdentity(): Promise<NexDeviceIdentity> {
+  if (!isTauriRuntime()) throw new Error("DEVICE_IDENTITY_APP_REQUIRED");
+  deviceIdentityPromise ??= import("@tauri-apps/api/core")
+    .then(({ invoke }) => invoke<NexDeviceIdentity>("nex_device_identity"))
+    .catch((error) => {
+      deviceIdentityPromise = null;
+      throw error;
+    });
   return deviceIdentityPromise;
 }
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
-}
-
-function isSessionFresh(session: NexLicenseSession) {
-  if (!session.entitlement || session.entitlement.status !== "active") return false;
-  return new Date(session.entitlement.expiresAt).getTime() > Date.now();
-}
-
-function isSessionRecentlyVerified(session: NexLicenseSession) {
-  const verifiedAt = new Date(session.verifiedAt).getTime();
-  if (!Number.isFinite(verifiedAt)) return false;
-  return Date.now() - verifiedAt < LICENSE_BACKGROUND_REFRESH_GRACE_MS;
-}
-
-function readStoredSession() {
-  if (typeof window === "undefined") return null;
-  const raw = window.localStorage.getItem(LICENSE_SESSION_STORAGE_KEY);
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as NexLicenseSession;
-    if (!parsed.email || !parsed.access) return null;
-    return parsed;
-  } catch {
-    window.localStorage.removeItem(LICENSE_SESSION_STORAGE_KEY);
-    return null;
-  }
-}
-
-function writeStoredSession(session: NexLicenseSession | null) {
-  if (typeof window === "undefined") return;
-  if (!session) {
-    window.localStorage.removeItem(LICENSE_SESSION_STORAGE_KEY);
-    return;
-  }
-  window.localStorage.setItem(LICENSE_SESSION_STORAGE_KEY, JSON.stringify(session));
 }
 
 function readRememberedEmail() {
@@ -347,7 +279,7 @@ function friendlyAuthError(error: unknown) {
     return "Não foi possível validar a identidade segura deste computador.";
   }
   if (/DEVICE_IDENTITY_APP_REQUIRED/i.test(message)) {
-    return "Abra o NEX Optimizer instalado no Windows para ativar esta licença.";
+    return "Abra o NEXT instalado no Windows para ativar esta licença.";
   }
   if (/SERVER_NOT_CONFIGURED/i.test(message)) {
     return "O servidor de licenças ainda não foi configurado.";
@@ -355,57 +287,30 @@ function friendlyAuthError(error: unknown) {
   if (/LICENSE_NOT_FOUND|NO_ENTITLEMENT/i.test(message)) {
     return "Nenhum acesso ativo foi encontrado para este e-mail neste computador.";
   }
-  if (/TRANSFER_ALREADY_PENDING/i.test(message)) {
-    return "Já existe uma solicitação de troca aguardando análise.";
+  if (/LICENSE_SESSION_REQUIRED|LICENSE_SESSION_INVALID|LICENSE_REQUIRED/i.test(message)) {
+    return "Ative novamente com o código original da compra neste computador. Para trocar de PC, procure o suporte.";
   }
-  if (/TRANSFER_RATE_LIMITED/i.test(message)) {
-    return "O limite de três solicitações de troca em 30 dias foi atingido.";
+  if (/ACTIVATION_DENIED/i.test(message)) {
+    return "Não foi possível ativar. Confira o e-mail, o código original e o computador vinculado. Se necessário, procure o suporte.";
   }
-  if (/TRANSFER_LICENSE_INACTIVE/i.test(message)) {
-    return "A troca de computador exige uma licença ativa.";
-  }
-  if (/ALREADY_THIS_DEVICE/i.test(message)) {
-    return "Esta licença já está vinculada a este computador.";
-  }
+  if (/RATE_LIMITED/i.test(message))
+    return "Muitas tentativas. Aguarde alguns minutos antes de tentar novamente.";
   if (/network|fetch|Failed to fetch/i.test(message)) {
     return "Não foi possível acessar o servidor de licenças. Verifique sua conexão.";
   }
   return message;
 }
 
-async function invokeLicenseSession(
-  action: "activate" | "verify",
-  email: string,
-  identity: NexDeviceIdentity,
-  code?: string,
-) {
-  const client = getSupabaseClient();
-  if (!client) throw new Error("O servidor de licenças ainda não foi configurado.");
-
-  const { data, error } = await client.functions.invoke("nex-license-session", {
-    body: {
-      action,
-      email: normalizeEmail(email),
-      code,
-      device: identity,
-    },
-  });
-  if (error) {
-    let message = error.message;
-    const response = "context" in error ? (error.context as Response | undefined) : undefined;
-    if (response) {
-      try {
-        const body = (await response.clone().json()) as { error?: string };
-        if (body.error) message = body.error;
-      } catch {
-        // Keep SDK error message for non-JSON responses.
-      }
-    }
-    throw new Error(message);
-  }
-
-  const result = data as LicenseFunctionResponse;
-  if (!result?.ok && result?.error) throw new Error(result.error);
+async function invokeLicenseSession(action: "activate" | "verify", email?: string, code?: string) {
+  if (!isTauriRuntime()) throw new Error("DEVICE_IDENTITY_APP_REQUIRED");
+  const { invoke } = await import("@tauri-apps/api/core");
+  // The native layer obtains the device identity, talks to the server and holds the credential.
+  // JavaScript never receives a token and cannot grant native authorization.
+  const result = await invoke<LicenseFunctionResponse>(
+    action === "activate" ? "nex_license_activate" : "nex_license_verify",
+    action === "activate" ? { email: normalizeEmail(email ?? ""), code } : undefined,
+  );
+  if (!result?.ok) throw new Error(result?.error ?? "LICENSE_SESSION_INVALID");
   return result;
 }
 
@@ -423,218 +328,149 @@ function buildSession(email: string, result: LicenseFunctionResponse): NexLicens
 export function NexAuthProvider({ children }: { children: ReactNode }) {
   const configured = isNexAuthConfigured();
   const [loading, setLoading] = useState(configured);
-  const [session, setSession] = useState<NexLicenseSession | null>(() => readStoredSession());
-  const [rememberedEmail, setRememberedEmail] = useState<string | null>(() => {
-    const stored = readStoredSession();
-    return stored?.email ?? readRememberedEmail();
-  });
-  const [entitlement, setEntitlement] = useState<NexEntitlement | null>(() => {
-    const stored = readStoredSession();
-    return stored?.entitlement ?? null;
-  });
+  const [session, setSession] = useState<NexLicenseSession | null>(null);
+  const [rememberedEmail, setRememberedEmail] = useState<string | null>(readRememberedEmail);
   const [deviceIdentity, setDeviceIdentity] = useState<NexDeviceIdentity | null>(null);
-  const [deviceAccess, setDeviceAccess] = useState<NexDeviceAccess>(() => {
-    const stored = readStoredSession();
-    return stored?.access ?? "unlicensed";
-  });
-  const [deviceTransfer, setDeviceTransfer] = useState<NexDeviceTransfer | null>(null);
+  const [deviceAccess, setDeviceAccess] = useState<NexDeviceAccess>("unlicensed");
   const [error, setError] = useState<string | null>(null);
+  const requestVersion = useRef(0);
+  const entitlement = session?.entitlement ?? null;
+  const hasSession = session !== null;
 
-  const setLicenseSession = useCallback((nextSession: NexLicenseSession | null) => {
-    setSession(nextSession);
-    setEntitlement(nextSession?.entitlement ?? null);
-    setDeviceAccess(nextSession?.access ?? "unlicensed");
-    if (nextSession?.email) {
-      setRememberedEmail(nextSession.email);
-      writeRememberedEmail(nextSession.email);
+  const setLicenseSession = useCallback((next: NexLicenseSession | null) => {
+    setSession(next);
+    setDeviceAccess(next?.access ?? "unlicensed");
+    if (next?.email) {
+      setRememberedEmail(next.email);
+      writeRememberedEmail(next.email);
     }
-    writeStoredSession(nextSession);
   }, []);
 
   const refreshEntitlement = useCallback(
-    async (options?: { force?: boolean }) => {
-      const stored = readStoredSession();
-      if (!stored?.email) {
+    async (_options?: { force?: boolean }) => {
+      const version = ++requestVersion.current;
+      if (!configured || !isTauriRuntime()) {
         setLicenseSession(null);
         setLoading(false);
         return;
       }
-
-      if (!configured) {
-        setLicenseSession(stored);
-        setLoading(false);
-        return;
-      }
-
-      const canUseStoredAccess = isSessionFresh(stored) && stored.access === "allowed";
-      const shouldRefreshInBackground =
-        canUseStoredAccess && !options?.force && isSessionRecentlyVerified(stored);
-
-      if (canUseStoredAccess) {
-        setLicenseSession(stored);
-        setLoading(false);
-        if (shouldRefreshInBackground) return;
-      }
-
+      setLoading(true);
       try {
-        if (!canUseStoredAccess) {
-          setLoading(true);
-          setDeviceAccess("checking");
-        }
-        const identity = await getDeviceIdentity();
-        setDeviceIdentity(identity);
-        const result = await invokeLicenseSession("verify", stored.email, identity);
-        setLicenseSession(buildSession(stored.email, result));
+        const result = await invokeLicenseSession("verify");
+        if (version !== requestVersion.current) return;
+        setLicenseSession(buildSession(result.account?.email ?? "", result));
         setError(null);
       } catch (loadError) {
-        if (canUseStoredAccess) {
-          setLicenseSession({ ...stored, access: "allowed" });
-          setError(null);
-        } else if (isSessionFresh(stored)) {
-          setLicenseSession({ ...stored, access: stored.access || "allowed" });
-        } else {
-          setDeviceAccess("unavailable");
-          setError(friendlyAuthError(loadError));
-        }
+        if (version !== requestVersion.current) return;
+        setLicenseSession(null);
+        const message = loadError instanceof Error ? loadError.message : String(loadError);
+        setDeviceAccess(
+          /LICENSE_SESSION_REQUIRED|LICENSE_REQUIRED/i.test(message) ? "unlicensed" : "unavailable",
+        );
+        setError(friendlyAuthError(loadError));
       } finally {
-        setLoading(false);
+        if (version === requestVersion.current) setLoading(false);
       }
     },
     [configured, setLicenseSession],
   );
 
   useEffect(() => {
-    void getDeviceIdentity()
-      .then((identity) => setDeviceIdentity(identity))
-      .catch((identityError) => setError(friendlyAuthError(identityError)));
-  }, []);
-
-  useEffect(() => {
+    // Old cached access was editable by the browser. Discard it; keep only the email hint.
+    window.localStorage.removeItem(LICENSE_SESSION_STORAGE_KEY);
+    if (isTauriRuntime())
+      void getDeviceIdentity()
+        .then(setDeviceIdentity)
+        .catch(() => {});
     void refreshEntitlement();
+    return () => {
+      requestVersion.current += 1;
+    };
   }, [refreshEntitlement]);
 
   useEffect(() => {
-    if (!entitlement || entitlement.status !== "active") return;
-
-    const remainingMs = new Date(entitlement.expiresAt).getTime() - Date.now();
-    if (remainingMs <= 0) {
-      void refreshEntitlement();
-      return;
-    }
-
-    const timeout = window.setTimeout(
-      () => void refreshEntitlement(),
-      Math.min(remainingMs + 250, 2_147_000_000),
-    );
-    return () => window.clearTimeout(timeout);
-  }, [entitlement, refreshEntitlement]);
-
-  useEffect(() => {
-    if (!session?.email || typeof window === "undefined") return;
-
-    const refreshAccess = () => void refreshEntitlement();
-    window.addEventListener("focus", refreshAccess);
-    window.addEventListener("online", refreshAccess);
+    if (!hasSession) return;
+    const refresh = () => void refreshEntitlement();
+    const timer = window.setInterval(refresh, 30_000);
+    window.addEventListener("focus", refresh);
+    window.addEventListener("online", refresh);
     return () => {
-      window.removeEventListener("focus", refreshAccess);
-      window.removeEventListener("online", refreshAccess);
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("online", refresh);
     };
-  }, [refreshEntitlement, session?.email]);
+  }, [refreshEntitlement, hasSession]);
 
   const activateWithEmailCode = useCallback(
     async (email: string, code: string) => {
-      const normalizedEmail = normalizeEmail(email);
-      const normalizedCode = code.trim();
-      if (!normalizedEmail) throw new Error("Digite o e-mail usado na compra.");
-      if (normalizedCode.length < 8) throw new Error("Digite um código NEX válido.");
-
-      const identity = deviceIdentity ?? (await getDeviceIdentity());
-      setDeviceIdentity(identity);
-      const result = await invokeLicenseSession(
-        "activate",
-        normalizedEmail,
-        identity,
-        normalizedCode,
-      );
-      const nextSession = buildSession(normalizedEmail, result);
-      if (!nextSession.entitlement || nextSession.access !== "allowed") {
-        throw new Error("O código foi processado, mas o acesso não foi liberado.");
-      }
-      setLicenseSession(nextSession);
-      setError(null);
-      return nextSession.entitlement;
-    },
-    [deviceIdentity, setLicenseSession],
-  );
-
-  const verifyEmailAccess = useCallback(
-    async (email: string) => {
+      const version = ++requestVersion.current;
       try {
         const normalizedEmail = normalizeEmail(email);
         if (!normalizedEmail) throw new Error("Digite o e-mail usado na compra.");
-
-        const identity = deviceIdentity ?? (await getDeviceIdentity());
-        setDeviceIdentity(identity);
-        const result = await invokeLicenseSession("verify", normalizedEmail, identity);
-        const nextSession = buildSession(normalizedEmail, result);
-        if (!nextSession.entitlement || nextSession.access !== "allowed") {
-          throw new Error("Nenhum acesso ativo foi encontrado para este e-mail neste computador.");
+        if (code.trim().length < 8) throw new Error("Digite um código NEXT válido.");
+        const result = await invokeLicenseSession("activate", normalizedEmail, code.trim());
+        const next = buildSession(normalizedEmail, result);
+        if (!next.entitlement || next.access !== "allowed")
+          throw new Error("O acesso não foi liberado.");
+        if (version === requestVersion.current) {
+          setLicenseSession(next);
+          setError(null);
+          setLoading(false);
         }
-        setLicenseSession(nextSession);
-        setError(null);
-        return nextSession.entitlement;
-      } catch (verifyError) {
-        throw new Error(friendlyAuthError(verifyError));
-      }
-    },
-    [deviceIdentity, setLicenseSession],
-  );
-
-  const signInWithGoogle = useCallback(async () => {
-    setError("O login Google foi removido do fluxo do cliente. Use e-mail e código de acesso.");
-  }, []);
-
-  const signOut = useCallback(async () => {
-    const stored = readStoredSession();
-    const reusableSession =
-      stored && isSessionFresh(stored) && stored.access === "allowed" ? stored : null;
-    const emailToRemember = reusableSession?.email ?? session?.email ?? rememberedEmail;
-    if (emailToRemember) {
-      setRememberedEmail(emailToRemember);
-      writeRememberedEmail(emailToRemember);
-    }
-    setDeviceTransfer(null);
-    setError(null);
-    if (reusableSession) {
-      setLicenseSession(reusableSession);
-      void refreshEntitlement({ force: true });
-      return;
-    }
-    setLicenseSession(null);
-  }, [refreshEntitlement, rememberedEmail, session?.email, setLicenseSession]);
-
-  const redeemCode = useCallback(
-    async (code: string, email?: string) => {
-      const targetEmail = email ?? session?.email ?? "";
-      try {
-        return await activateWithEmailCode(targetEmail, code);
+        return next.entitlement;
       } catch (activationError) {
         throw new Error(friendlyAuthError(activationError));
       }
     },
-    [activateWithEmailCode, session?.email],
+    [setLicenseSession],
   );
 
-  const requestDeviceTransfer = useCallback(async () => {
-    throw new Error("A troca automática de computador será conectada ao novo fluxo de e-mail.");
+  const verifyEmailAccess = useCallback(
+    async (_email: string) => {
+      const version = ++requestVersion.current;
+      try {
+        // Email is an input hint only. Verification always uses the native stored credential.
+        const result = await invokeLicenseSession("verify");
+        const next = buildSession(result.account?.email ?? "", result);
+        if (!next.entitlement || next.access !== "allowed")
+          throw new Error("LICENSE_SESSION_INVALID");
+        if (version === requestVersion.current) {
+          setLicenseSession(next);
+          setError(null);
+          setLoading(false);
+        }
+        return next.entitlement;
+      } catch (verifyError) {
+        if (version === requestVersion.current) setLicenseSession(null);
+        throw new Error(friendlyAuthError(verifyError));
+      }
+    },
+    [setLicenseSession],
+  );
+
+  const signInWithGoogle = useCallback(async () => {
+    setError("Use o e-mail e o código original da compra para ativar o acesso.");
   }, []);
 
-  const cancelDeviceTransfer = useCallback(async () => {
-    throw new Error("A troca automática de computador será conectada ao novo fluxo de e-mail.");
-  }, []);
+  const signOut = useCallback(async () => {
+    ++requestVersion.current;
+    try {
+      if (isTauriRuntime()) {
+        const { invoke } = await import("@tauri-apps/api/core");
+        await invoke("nex_license_sign_out");
+      }
+    } finally {
+      setLicenseSession(null);
+      setLoading(false);
+      window.localStorage.removeItem(LICENSE_SESSION_STORAGE_KEY);
+    }
+  }, [setLicenseSession]);
 
+  const redeemCode = useCallback(
+    (code: string, email?: string) => activateWithEmailCode(email ?? session?.email ?? "", code),
+    [activateWithEmailCode, session?.email],
+  );
   const clearError = useCallback(() => setError(null), []);
-
   const value = useMemo<AuthContextValue>(
     () => ({
       configured,
@@ -645,40 +481,33 @@ export function NexAuthProvider({ children }: { children: ReactNode }) {
       entitlement,
       deviceIdentity,
       deviceAccess,
-      deviceTransfer,
       error,
       activateWithEmailCode,
       verifyEmailAccess,
       signInWithGoogle,
       signOut,
       redeemCode,
-      requestDeviceTransfer,
-      cancelDeviceTransfer,
       refreshEntitlement,
       clearError,
     }),
     [
-      activateWithEmailCode,
-      cancelDeviceTransfer,
-      clearError,
       configured,
-      deviceAccess,
-      deviceIdentity,
-      deviceTransfer,
-      entitlement,
-      error,
       loading,
-      rememberedEmail,
-      redeemCode,
-      refreshEntitlement,
-      requestDeviceTransfer,
       session,
+      rememberedEmail,
+      entitlement,
+      deviceIdentity,
+      deviceAccess,
+      error,
+      activateWithEmailCode,
+      verifyEmailAccess,
       signInWithGoogle,
       signOut,
-      verifyEmailAccess,
+      redeemCode,
+      refreshEntitlement,
+      clearError,
     ],
   );
-
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

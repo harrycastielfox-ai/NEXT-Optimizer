@@ -1,164 +1,95 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "@supabase/supabase-js";
+import {
+  audit,
+  ClientError,
+  corsHeaders,
+  emailField,
+  errorResponse,
+  json,
+  newSessionToken,
+  privateHash,
+  rateLimit,
+  readPayload,
+  requestLimit,
+  sha256Hex,
+  stringField,
+} from "../_shared/security.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-
-type LicenseAction = "activate" | "verify";
-
-type LicenseRequest = {
-  action?: LicenseAction;
-  email?: string;
-  code?: string;
-  device?: {
-    fingerprint?: string;
-    label?: string;
-    source?: string;
-  };
-};
-
-type LicenseRow = {
-  account_id: string | null;
-  account_email: string;
-  access_allowed: boolean;
-  access_reason: string;
-  license_plan_id: string | null;
-  license_plan_name: string | null;
-  license_status: string | null;
-  license_starts_at: string | null;
-  license_expires_at: string | null;
-  licensed_device_label: string | null;
-};
-
-function json(body: unknown, status = 200) {
-  return Response.json(body, { status, headers: corsHeaders });
-}
-
-function safeError(error: unknown) {
-  if (error instanceof Error) return error.message;
-  return String(error);
-}
-
-function normalizeEmail(email: string | undefined) {
-  return String(email ?? "")
-    .trim()
-    .toLowerCase();
-}
-
-function validatePayload(payload: LicenseRequest) {
-  const email = normalizeEmail(payload.email);
-  const fingerprint = String(payload.device?.fingerprint ?? "")
-    .trim()
-    .toLowerCase();
-  const label =
-    String(payload.device?.label ?? "PC Windows")
-      .trim()
-      .slice(0, 120) || "PC Windows";
-
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-    throw new Error("ACCOUNT_EMAIL_REQUIRED");
+export function validatePayload(payload: Record<string, unknown>) {
+  if (!["activate", "verify", "revoke"].includes(String(payload.action)))
+    throw new ClientError("INVALID_ACTION");
+  const action = payload.action as "activate" | "verify" | "revoke";
+  const device = payload.device as Record<string, unknown> | undefined;
+  const fingerprint = stringField(device?.fingerprint, 64, "INVALID_DEVICE").toLowerCase();
+  if (!/^[a-f0-9]{64}$/.test(fingerprint)) throw new ClientError("INVALID_DEVICE");
+  const label = stringField(device?.label ?? "PC Windows", 120, "INVALID_DEVICE") || "PC Windows";
+  if (action === "activate") {
+    const email = emailField(payload.email);
+    const code = stringField(payload.code, 128, "INVALID_CODE").toUpperCase().replace(/[- ]/g, "");
+    if (!/^[A-Z0-9]{8,100}$/.test(code)) throw new ClientError("INVALID_CODE");
+    return { action, email, code, fingerprint, label, sessionToken: "" };
   }
-  if (!/^[a-f0-9]{64}$/.test(fingerprint)) {
-    throw new Error("INVALID_DEVICE");
-  }
-
-  return { email, fingerprint, label };
+  const sessionToken = stringField(payload.sessionToken, 64, "LICENSE_SESSION_REQUIRED");
+  if (!/^[a-f0-9]{64}$/.test(sessionToken)) throw new ClientError("LICENSE_SESSION_REQUIRED", 401);
+  return { action, email: "", code: "", fingerprint, label, sessionToken };
 }
 
-function mapAccessReason(reason: string) {
-  if (reason === "ALLOWED") return "allowed";
-  if (reason === "NO_ENTITLEMENT") return "unlicensed";
-  if (reason === "EXPIRED") return "expired";
-  if (reason === "REVOKED") return "revoked";
-  if (reason === "DEVICE_MISMATCH" || reason === "DEVICE_ALREADY_BOUND") return "blocked";
-  return "unavailable";
-}
-
-function mapRow(row: LicenseRow) {
-  const entitlement =
-    row.license_plan_id && row.license_expires_at
-      ? {
-          userId: String(row.account_id ?? row.account_email),
-          planId: row.license_plan_id,
-          planName: row.license_plan_name ?? row.license_plan_id,
-          status:
-            row.license_status === "revoked"
-              ? "revoked"
-              : new Date(row.license_expires_at).getTime() <= Date.now()
-                ? "expired"
-                : "active",
-          startsAt: row.license_starts_at ?? new Date().toISOString(),
-          expiresAt: row.license_expires_at,
-        }
-      : null;
-
-  return {
-    ok: true,
-    account: {
-      id: row.account_id,
-      email: row.account_email,
-    },
-    access: mapAccessReason(row.access_reason),
-    accessReason: row.access_reason,
-    entitlement,
-    deviceLabel: row.licensed_device_label,
-  };
-}
-
-Deno.serve(async (req: Request) => {
+export async function handleRequest(req: Request) {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ ok: false, error: "METHOD_NOT_ALLOWED" }, 405);
-
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!supabaseUrl || !serviceRoleKey) {
-    return json({ ok: false, error: "SERVER_NOT_CONFIGURED" }, 500);
-  }
-
-  let payload: LicenseRequest;
+  const url = Deno.env.get("SUPABASE_URL");
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !key) return json({ ok: false, error: "SERVER_NOT_CONFIGURED" }, 503);
+  const admin = createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
   try {
-    payload = (await req.json()) as LicenseRequest;
-  } catch {
-    return json({ ok: false, error: "INVALID_JSON" }, 400);
-  }
-
-  const action = payload.action;
-  if (action !== "activate" && action !== "verify") {
-    return json({ ok: false, error: "INVALID_ACTION" }, 400);
-  }
-
-  try {
-    const { email, fingerprint, label } = validatePayload(payload);
-    const admin = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
-
-    const rpcName =
-      action === "activate" ? "redeem_email_license_code" : "get_email_device_entitlement";
-    const rpcPayload =
+    await requestLimit(admin, req, "license", key);
+    const payload = validatePayload(await readPayload(req));
+    const { action, email, code, fingerprint, label } = payload;
+    await rateLimit(
+      admin,
+      await privateHash(action + ":" + (email || payload.sessionToken), key),
+      action === "activate" ? 10 : 180,
+      action === "activate" ? 900 : 60,
+    );
+    if (action === "activate")
+      await rateLimit(admin, await privateHash("code:" + code, key), 10, 900);
+    const token = action === "activate" ? newSessionToken() : payload.sessionToken;
+    const tokenHash = await sha256Hex(token);
+    const rpc =
+      action === "activate"
+        ? "nex_activate_license_session"
+        : action === "verify"
+          ? "nex_verify_license_session"
+          : "nex_revoke_license_session";
+    const args =
       action === "activate"
         ? {
             requested_email: email,
-            redemption_code: String(payload.code ?? ""),
+            redemption_code: code,
             device_fingerprint: fingerprint,
             requested_device_label: label,
+            requested_token_hash: tokenHash,
           }
-        : {
-            requested_email: email,
-            device_fingerprint: fingerprint,
-            requested_device_label: label,
-          };
-
-    const { data, error } = await admin.rpc(rpcName, rpcPayload);
-    if (error) return json({ ok: false, error: error.message }, 400);
-
-    const row = (Array.isArray(data) ? data[0] : data) as LicenseRow | undefined;
-    if (!row) return json({ ok: false, error: "LICENSE_NOT_FOUND" }, 404);
-    return json(mapRow(row));
+        : { requested_token_hash: tokenHash, device_fingerprint: fingerprint };
+    const { data, error } = await admin.rpc(rpc, args);
+    if (error) {
+      await audit(admin, action, "denied");
+      // Do not expose SQL internals, account existence, or code ownership.
+      throw new ClientError(
+        action === "activate" ? "ACTIVATION_DENIED" : "LICENSE_SESSION_INVALID",
+        403,
+      );
+    }
+    if (action === "revoke") return json({ ok: true });
+    const result = data as Record<string, unknown> | null;
+    if (!result?.ok) throw new ClientError("LICENSE_SESSION_INVALID", 401);
+    if (action === "activate") result.session = { ...(result.session as object), token };
+    return json(result);
   } catch (error) {
-    return json({ ok: false, error: safeError(error) }, 400);
+    return errorResponse(error);
   }
-});
+}
+
+if (import.meta.main) Deno.serve(handleRequest);

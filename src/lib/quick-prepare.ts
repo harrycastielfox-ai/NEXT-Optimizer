@@ -223,7 +223,7 @@ export function buildQuickPrepareTaskPlan(context: QuickPrepareContext): QuickPr
       "check-admin",
       "scan",
       "Verificar administrador",
-      "Confere se o NEX está elevado.",
+      "Confere se o NEXT está elevado.",
       "scanOnly",
     ),
     task(
@@ -348,7 +348,7 @@ export async function runQuickPrepareExecutor(
       taskIndex: index,
       totalTasks: steps.length,
       status: "running",
-      outputs: ["Executando via fila NEX."],
+      outputs: ["Executando via fila NEXT."],
     });
 
     const result = await runQuickPrepareTask(step, context, state);
@@ -393,7 +393,7 @@ async function runQuickPrepareTask(
           reports: { system },
           outputs: [
             "Modo real exige administrador antes de iniciar o Preparar PC.",
-            "Abra o NEX pelo atalho com UAC confirmado e rode a Fase 1 novamente.",
+            "Abra o NEXT pelo atalho com UAC confirmado e rode a Fase 1 novamente.",
           ],
         };
       }

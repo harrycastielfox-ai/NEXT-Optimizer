@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "NEX Optimizer",
+  "productName": "NEXT Optimizer",
   "version": "0.1.0",
   "identifier": "com.nexoptimizer.desktop",
   "build": {
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "NEX Optimizer",
+        "title": "NEXT Optimizer",
         "width": 1600,
         "height": 900,
         "resizable": true,
@@ -44,7 +44,7 @@
   "bundle": {
     "active": true,
     "targets": ["msi", "nsis"],
-    "publisher": "NEX Optimizer Team",
+    "publisher": "NEXT Optimizer Team",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

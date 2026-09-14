@@ -273,7 +273,10 @@ fn download_installers_blocking(
     app: AppHandle,
     request: GamerDependencyVerifyRequest,
 ) -> Result<GamerDependencyDownloadResult, String> {
+    require_dependency_download()?;
     let cache_dir = dependency_cache_dir(&app)?;
+    fs::create_dir_all(&cache_dir)
+        .map_err(|error| format!("Nao foi possivel criar cache de instaladores: {error}"))?;
     let mut downloaded_count = 0;
     let mut skipped_count = 0;
     let mut failed_count = 0;
@@ -345,7 +348,11 @@ fn audit_manifest_blocking(
     app: AppHandle,
     request: GamerDependencyVerifyRequest,
 ) -> Result<GamerDependencyManifestAuditResult, String> {
+    // Auditing the official manifest also downloads executables for inspection.
+    require_dependency_download()?;
     let audit_dir = dependency_audit_dir(&app)?;
+    fs::create_dir_all(&audit_dir)
+        .map_err(|error| format!("Nao foi possivel criar pasta de auditoria: {error}"))?;
     let mut items = Vec::new();
     let mut messages = Vec::new();
 
@@ -426,6 +433,7 @@ fn install_verified_blocking(
     if !dry_run && !request.confirmed {
         return Err("Instalacao real exige confirmacao explicita.".to_string());
     }
+    crate::licensing::require_real_license(dry_run)?;
     if !dry_run && !is_process_elevated() {
         return Err(
             "Instalacao real exige que o NEX esteja aberto como administrador.".to_string(),
@@ -1427,14 +1435,19 @@ fn run_powershell_args(script: &str, args: &[String]) -> Result<String, String> 
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
+fn require_dependency_download() -> Result<(), String> {
+    if safe_mode::is_enabled() {
+        return Err("SAFE_TEST_MODE: downloads e auditorias que baixam instaladores estao bloqueados no modo seguro de teste. A verificacao de arquivos existentes continua disponivel.".into());
+    }
+    crate::licensing::require_real_license(false)
+}
+
 fn dependency_cache_dir(app: &AppHandle) -> Result<PathBuf, String> {
     let mut dir = app
         .path()
         .app_data_dir()
         .map_err(|error| format!("Nao foi possivel localizar AppData: {error}"))?;
     dir.push("installer-cache");
-    fs::create_dir_all(&dir)
-        .map_err(|error| format!("Nao foi possivel criar cache de instaladores: {error}"))?;
     Ok(dir)
 }
 
@@ -1444,8 +1457,6 @@ fn dependency_audit_dir(app: &AppHandle) -> Result<PathBuf, String> {
         .app_data_dir()
         .map_err(|error| format!("Nao foi possivel localizar AppData: {error}"))?;
     dir.push("installer-audit");
-    fs::create_dir_all(&dir)
-        .map_err(|error| format!("Nao foi possivel criar pasta de auditoria: {error}"))?;
     Ok(dir)
 }
 

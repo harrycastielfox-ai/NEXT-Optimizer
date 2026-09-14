@@ -241,6 +241,7 @@ pub fn performance_apply_controlled(
     if !dry_run && !request.confirmed {
         return Err("Confirmacao obrigatoria antes de aplicar otimizacoes reais.".to_string());
     }
+    crate::licensing::require_real_license(dry_run)?;
 
     let raw = collect_windows_performance()?;
     let selected_ids = selected_action_ids(request.action_ids.as_deref());
@@ -251,7 +252,7 @@ pub fn performance_apply_controlled(
     ensure_rollback_ready(&actions)?;
 
     let snapshot_request = build_performance_snapshot_request(&request, &actions, dry_run);
-    let snapshot = restore::restore_create_snapshot(app.clone(), Some(snapshot_request))?;
+    let snapshot = restore::create_snapshot(app.clone(), Some(snapshot_request))?;
     append_performance_event(
         &app,
         PerformanceEventLevel::Info,

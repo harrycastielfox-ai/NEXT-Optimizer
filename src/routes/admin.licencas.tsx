@@ -18,10 +18,10 @@ import { invokeNexLicenseAdmin, NEX_PLANS, type NexPlan } from "@/lib/nex-auth";
 export const Route = createFileRoute("/admin/licencas")({
   head: () => ({
     meta: [
-      { title: "NEX Optimizer - Administração de licenças" },
+      { title: "NEXT - Administração de licenças" },
       {
         name: "description",
-        content: "Operações administrativas protegidas do licenciamento NEX.",
+        content: "Operações administrativas protegidas do licenciamento NEXT.",
       },
     ],
   }),
@@ -49,9 +49,7 @@ type TransferRequest = {
 const ADMIN_KEY_SESSION_KEY = "nex.admin.key.session.v1";
 
 function NexLicenseAdminPage() {
-  const [adminKey, setAdminKey] = useState(() =>
-    typeof window === "undefined" ? "" : window.sessionStorage.getItem(ADMIN_KEY_SESSION_KEY) || "",
-  );
+  const [adminKey, setAdminKey] = useState("");
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [planId, setPlanId] = useState(NEX_PLANS[1].id);
   const [email, setEmail] = useState("");
@@ -79,7 +77,6 @@ function NexLicenseAdminPage() {
         );
         setTransfers(result.transfers);
         setAdminUnlocked(true);
-        window.sessionStorage.setItem(ADMIN_KEY_SESSION_KEY, key);
       } catch (error) {
         setAdminUnlocked(false);
         window.sessionStorage.removeItem(ADMIN_KEY_SESSION_KEY);
@@ -92,8 +89,8 @@ function NexLicenseAdminPage() {
   );
 
   useEffect(() => {
-    if (adminKey.trim()) void loadTransfers(adminKey);
-  }, [adminKey, loadTransfers]);
+    window.sessionStorage.removeItem(ADMIN_KEY_SESSION_KEY);
+  }, []);
 
   async function handleUnlock(event: FormEvent) {
     event.preventDefault();
@@ -150,8 +147,8 @@ function NexLicenseAdminPage() {
           decision,
           note:
             decision === "approved"
-              ? "Troca aprovada pelo painel NEX."
-              : "Troca rejeitada pelo painel NEX.",
+              ? "Troca aprovada pelo painel NEXT."
+              : "Troca rejeitada pelo painel NEXT.",
         },
         adminKey,
       );
@@ -177,12 +174,12 @@ function NexLicenseAdminPage() {
         <div className="mx-auto w-full max-w-[1220px]">
           <header className="border-b border-border/60 pb-5">
             <p className="text-[11px] font-black uppercase tracking-[0.22em] text-primary">
-              NEX CONTROL
+              NEXT CONTROL
             </p>
             <h1 className="mt-2 text-3xl font-black text-foreground">Administração de licenças</h1>
             <p className="mt-1 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-              Gere códigos vinculados ao comprador e analise trocas de computador. O acesso é
-              validado no servidor em cada operação.
+              Gere códigos vinculados ao comprador. O histórico abaixo contém apenas trocas do fluxo
+              antigo. O acesso é validado no servidor em cada operação.
             </p>
           </header>
 
@@ -346,9 +343,9 @@ function NexLicenseAdminPage() {
                 <section>
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <h2 className="text-lg font-black text-foreground">Trocas de computador</h2>
+                      <h2 className="text-lg font-black text-foreground">Trocas do fluxo antigo</h2>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        O computador antigo só perde acesso após aprovação.
+                        As licenças atuais por e-mail usam o atendimento manual documentado.
                       </p>
                     </div>
                     <button

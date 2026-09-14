@@ -57,8 +57,8 @@ export function NexMascot({ status, compact = false }: NexMascotProps) {
 }
 
 function mascotLabel(status: NexOptimizationStatus) {
-  if (status === "completed") return "Mascote NEX com otimizacao concluida";
-  if (status === "error") return "Mascote NEX com erro";
-  if (status === "paused") return "Mascote NEX aguardando";
-  return "Mascote NEX trabalhando";
+  if (status === "completed") return "Mascote NEXT com otimizacao concluida";
+  if (status === "error") return "Mascote NEXT com erro";
+  if (status === "paused") return "Mascote NEXT aguardando";
+  return "Mascote NEXT trabalhando";
 }

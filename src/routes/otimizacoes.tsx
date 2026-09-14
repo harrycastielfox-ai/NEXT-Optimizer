@@ -45,8 +45,8 @@ export const Route = createFileRoute("/otimizacoes")({
   },
   head: () => ({
     meta: [
-      { title: "NEX Optimizer - Otimizações" },
-      { name: "description", content: "Performance Engine somente leitura do NEX Optimizer." },
+      { title: "NEXT Optimizer - Otimizações" },
+      { name: "description", content: "Performance Engine somente leitura do NEXT Optimizer." },
     ],
   }),
   component: OtimizacoesPage,
@@ -108,7 +108,7 @@ function OtimizacoesPage() {
               Otimizações
             </h1>
             <p className="text-[13px] text-muted-foreground mt-1">
-              Com base no diagnóstico do seu PC, o NEX organizou ajustes que podem melhorar
+              Com base no diagnóstico do seu PC, o NEXT organizou ajustes que podem melhorar
               desempenho, inicialização e experiência geral, mantendo reversão e modo seguro.
             </p>
           </div>
@@ -119,7 +119,7 @@ function OtimizacoesPage() {
             <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <h2 className="text-sm font-bold tracking-[0.18em] text-primary">
-                  O QUE O NEX RECOMENDA
+                  O QUE O NEXT RECOMENDA
                 </h2>
                 <p className="text-[12px] text-muted-foreground mt-1">
                   Primeira camada em linguagem simples. Os detalhes técnicos continuam disponíveis
@@ -153,7 +153,7 @@ function OtimizacoesPage() {
             >
               <div>
                 <h2 className="text-sm font-bold tracking-[0.18em] text-primary">
-                  COMO O NEX FAZ ISSO
+                  COMO O NEXT FAZ ISSO
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Performance Engine, Advanced Engine, comandos, valores e ações bloqueadas ficam
@@ -293,7 +293,7 @@ function buildOptimizationRecommendations(
       level: "medium",
       rollback: "Disponível",
       mode: safeModeLabel(),
-      detail: `Plano atual: ${report.powerPlan.activeSchemeName}. O NEX recomenda validar energia antes de qualquer perfil.`,
+      detail: `Plano atual: ${report.powerPlan.activeSchemeName}. O NEXT recomenda validar energia antes de qualquer perfil.`,
     },
     {
       id: "startup",
@@ -307,7 +307,7 @@ function buildOptimizationRecommendations(
       rollback: "Disponível",
       mode: safeModeLabel(),
       detail:
-        "A recomendação principal é validar primeiro. O NEX não remove programas e não apaga executáveis.",
+        "A recomendação principal é validar primeiro. O NEXT não remove programas e não apaga executáveis.",
     },
     {
       id: "gamer",
@@ -323,7 +323,7 @@ function buildOptimizationRecommendations(
       rollback: "Disponível",
       mode: safeModeLabel(),
       detail:
-        "O NEX deve sugerir ajustes e fechamento de apps apenas com confirmação, preservando processos protegidos.",
+        "O NEXT deve sugerir ajustes e fechamento de apps apenas com confirmação, preservando processos protegidos.",
     },
     {
       id: "visual",
@@ -788,11 +788,11 @@ function blockedPresentation(item: AdvancedBlockedAction) {
     },
     "delete-user-files": {
       title: "Apagar arquivos pessoais",
-      reason: "Bloqueado: arquivos pessoais ficam fora do NEX.",
+      reason: "Bloqueado: arquivos pessoais ficam fora do NEXT.",
     },
     "remove-programs": {
       title: "Remover programas",
-      reason: "Bloqueado: o NEX nunca remove softwares.",
+      reason: "Bloqueado: o NEXT nunca remove softwares.",
     },
     "free-registry-delete": {
       title: "Alterações livres no sistema",
@@ -851,7 +851,7 @@ function performancePresentation(item: PerformanceSetting) {
 
   const presentation = map[item.id] ?? {
     title: item.label,
-    description: "Configuração de desempenho monitorada pelo NEX.",
+    description: "Configuração de desempenho monitorada pelo NEXT.",
     impact: "Impacto: depende do estado atual do Windows.",
   };
 

@@ -26,8 +26,8 @@ import { HERMES_SAFE_TEST_MODE } from "@/lib/safe-mode";
 export const Route = createFileRoute("/personalizado")({
   head: () => ({
     meta: [
-      { title: "NEX Optimizer - Personalizado" },
-      { name: "description", content: "Ações individuais seguras do NEX Optimizer." },
+      { title: "NEXT Optimizer - Personalizado" },
+      { name: "description", content: "Ações individuais seguras do NEXT Optimizer." },
     ],
   }),
   component: PersonalizadoPage,
@@ -67,7 +67,7 @@ function PersonalizadoPage() {
     const userConfirmed =
       HERMES_SAFE_TEST_MODE ||
       window.confirm(
-        `Preparar esta ação individual?\n\n${customPresentation(action).title}\n\nO NEX usará apenas itens allowlistados, com snapshot/log quando aplicável.`,
+        `Preparar esta ação individual?\n\n${customPresentation(action).title}\n\nO NEXT usará apenas itens allowlistados, com snapshot/log quando aplicável.`,
       );
 
     if (!userConfirmed) {
@@ -111,7 +111,7 @@ function PersonalizadoPage() {
           title: blockedTitle(action),
           message: blockedMayRequireRestart(action)
             ? "Preparado para validação segura. Esta opção pode exigir reinício quando for aplicada em fluxo real."
-            : "Preparado para validação segura. O NEX mantem a execução controlada e guiada.",
+            : "Preparado para validação segura. O NEXT mantem a execução controlada e guiada.",
           requiresRestart: blockedMayRequireRestart(action),
         },
       ]);
@@ -137,7 +137,7 @@ function PersonalizadoPage() {
               Personalizado
             </h1>
             <p className="mt-1 max-w-4xl text-[13px] leading-relaxed text-muted-foreground">
-              Escolha uma ação específica da lista segura do NEX. Esta é a única área para validar
+              Escolha uma ação específica da lista segura do NEXT. Esta é a única área para validar
               comandos individuais; comandos livres e recursos perigosos continuam protegidos.
             </p>
           </div>
@@ -391,7 +391,7 @@ function WorkingOverlay({ hasRestartWarning }: { hasRestartWarning: boolean }) {
           <div>
             <p className="text-sm font-bold text-foreground">Validando ação</p>
             <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
-              O NEX está preparando a análise da ação escolhida. Em modo seguro, nenhuma alteração
+              O NEXT está preparando a análise da ação escolhida. Em modo seguro, nenhuma alteração
               real será aplicada.
             </p>
             {hasRestartWarning && (
@@ -427,7 +427,7 @@ function HighLevelActionDialog({
           <div className="min-w-0 flex-1">
             <p className="text-base font-bold text-foreground">Confirmar ação de nível alto</p>
             <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-              O NEX vai preparar esta ação com validação guiada. Antes de qualquer aplicação real,
+              O NEXT vai preparar esta ação com validação guiada. Antes de qualquer aplicação real,
               você sempre verá o que será feito, se precisa de admin, se pode exigir reinício e como
               acompanhar o resultado.
             </p>
@@ -602,7 +602,7 @@ function customPresentation(action: AdvancedAction) {
     map[action.id] ?? {
       title: action.title,
       description: action.description,
-      impact: "Impacto: validado pela lista segura do NEX.",
+      impact: "Impacto: validado pela lista segura do NEXT.",
     }
   );
 }
@@ -640,7 +640,7 @@ function highLevelDescription(action: AdvancedBlockedAction) {
     "delete-user-files":
       "Arquivos pessoais continuam fora das rotinas automáticas; qualquer ação manual precisa ser clara e isolada.",
     "remove-programs":
-      "Programas não são removidos pelo NEX; quando aplicável, apenas a inicialização pode ser gerenciada.",
+      "Programas não são removidos pelo NEXT; quando aplicável, apenas a inicialização pode ser gerenciada.",
     "free-registry-delete":
       "Chaves fora da lista segura exigem revisão técnica antes de qualquer alteração.",
     "hklm-multimedia-tweaks":

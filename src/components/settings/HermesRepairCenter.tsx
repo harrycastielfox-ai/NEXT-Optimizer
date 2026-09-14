@@ -70,7 +70,7 @@ const repairActions: RepairAction[] = [
     notes: [
       "Pode consumir CPU e disco durante a verificação.",
       "Não deve ser interrompido após iniciado em fase futura.",
-      "Nesta fase o NEX apenas prepara snapshot, log e histórico.",
+      "Nesta fase o NEXT apenas prepara snapshot, log e histórico.",
     ],
   },
   {
@@ -98,7 +98,7 @@ const repairActions: RepairAction[] = [
     notes: [
       "Pode depender de fontes locais ou Windows Update em fase futura.",
       "Sempre exigirá confirmação forte antes de executar.",
-      "Não e executado automaticamente pelo NEX.",
+      "Não e executado automaticamente pelo NEXT.",
     ],
   },
 ];
@@ -110,7 +110,7 @@ const protectedRepairActions: ProtectedRepairAction[] = [
     description: "Reparo profundo de disco.",
     reason: "Pode demorar bastante, exigir reinício e travar o volume durante a verificação.",
     guidance:
-      "O NEX deixa esse reparo em fluxo dedicado, com explicacao, confirmação forte e recomendação de backup antes de qualquer execução futura.",
+      "O NEXT deixa esse reparo em fluxo dedicado, com explicacao, confirmação forte e recomendação de backup antes de qualquer execução futura.",
     mayRequireRestart: true,
   },
   {
@@ -127,7 +127,7 @@ const protectedRepairActions: ProtectedRepairAction[] = [
     title: "reset de rede automático",
     description: "Reset amplo de adaptadores e configurações de rede.",
     reason: "Pode desconectar redes salvas, VPNs e adaptadores até a próxima configuração.",
-    guidance: "O NEX deve tratar isso como reparo avançado, nunca como otimização rápida.",
+    guidance: "O NEXT deve tratar isso como reparo avançado, nunca como otimização rápida.",
     mayRequireRestart: true,
   },
   {
@@ -136,7 +136,7 @@ const protectedRepairActions: ProtectedRepairAction[] = [
     description: "Reinstalacao/restauração ampla do sistema.",
     reason: "E uma ação estrutural do Windows e pode afetar aplicativos e configurações.",
     guidance:
-      "Fica fora do NEX automático. O app pode orientar o usuário, mas não deve disparar esse fluxo sozinho.",
+      "Fica fora do NEXT automático. O app pode orientar o usuário, mas não deve disparar esse fluxo sozinho.",
   },
 ];
 
@@ -173,14 +173,14 @@ export function HermesRepairCenter() {
 
       if (recordHistory) {
         const snapshot = await createRepairSnapshot({
-          title: "Diagnóstico NEX",
+          title: "Diagnóstico NEXT",
           description:
             "Snapshot local para auditoria antes do diagnóstico de reparo somente leitura.",
           command: "diagnostic_engine_read",
           risk: "low",
         });
         const entry = buildHistoryEntry({
-          action: "Diagnóstico NEX",
+          action: "Diagnóstico NEXT",
           result: `Diagnóstico concluído: ${nextDiagnostic.healthLabel}, Defender ${nextDiagnostic.defender.status}, Windows Update ${nextDiagnostic.windowsUpdate.status}.`,
           status: "checked",
           snapshotId: snapshot?.id,
@@ -197,7 +197,7 @@ export function HermesRepairCenter() {
       setError(message);
       commitHistory(
         buildHistoryEntry({
-          action: "Diagnóstico NEX",
+          action: "Diagnóstico NEXT",
           result: message,
           status: "failed",
         }),
@@ -209,7 +209,7 @@ export function HermesRepairCenter() {
 
   async function prepareRepair(action: RepairAction) {
     const confirmed = window.confirm(
-      `Preparar ${action.title}?\n\nComando futuro: ${action.command}\nTempo estimado: ${action.estimatedTime}\nRisco: ${riskLabel(action.risk)}\n\nNesta fase o NEX NÃO executará o comando. Será criado snapshot/log/histórico quando possível.`,
+      `Preparar ${action.title}?\n\nComando futuro: ${action.command}\nTempo estimado: ${action.estimatedTime}\nRisco: ${riskLabel(action.risk)}\n\nNesta fase o NEXT NÃO executará o comando. Será criado snapshot/log/histórico quando possível.`,
     );
     if (!confirmed) {
       return;
@@ -257,7 +257,7 @@ export function HermesRepairCenter() {
   function registerBlockedAction(action: string) {
     const entry = buildHistoryEntry({
       action,
-      result: "Bloqueado por politica NEX: reparo destrutivo ou pesado sem executor seguro.",
+      result: "Bloqueado por politica NEXT: reparo destrutivo ou pesado sem executor seguro.",
       status: "blocked",
     });
     commitHistory(entry);
@@ -283,7 +283,7 @@ export function HermesRepairCenter() {
             <p className="text-[11px] font-bold tracking-[0.22em] text-primary">PLANO DE REPARO</p>
             <h2 className="mt-1 text-xl font-bold text-foreground">Escolha uma verificação</h2>
             <p className="mt-1 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-              O NEX organiza reparos por etapas. Selecione um card para ver apenas o detalhe
+              O NEXT organiza reparos por etapas. Selecione um card para ver apenas o detalhe
               necessário.
             </p>
           </div>
@@ -387,7 +387,7 @@ function RepairProtectionsPanel({
               Reparos que exigem cuidado extra
             </h3>
             <p className="mt-1 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-              Estas funções existem no NEX como proteção obrigatória: elas não entram em otimização
+              Estas funções existem no NEXT como proteção obrigatória: elas não entram em otimização
               automática e só devem avançar em fluxo dedicado.
             </p>
           </div>
@@ -452,7 +452,7 @@ function ProtectedRepairCard({
         </div>
         <div className="rounded-xl border border-primary/15 bg-primary/5 px-3 py-2">
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
-            Como o NEX trata
+            Como o NEXT trata
           </p>
           <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
             {action.guidance}
@@ -575,7 +575,9 @@ function RepairActionDetail({
 
       <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.7fr)]">
         <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4">
-          <p className="text-[11px] font-bold tracking-[0.18em] text-primary">COMO O NEX PROTEGE</p>
+          <p className="text-[11px] font-bold tracking-[0.18em] text-primary">
+            COMO O NEXT PROTEGE
+          </p>
           <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
             {action.notes.slice(0, 3).map((note) => (
               <div
@@ -622,7 +624,7 @@ function DiagnosticPanel({
           <Stethoscope className="h-6 w-6" />
         </div>
         <div className="min-w-0">
-          <p className="text-[11px] font-bold tracking-[0.22em] text-primary">DIAGNOSTICO NEX</p>
+          <p className="text-[11px] font-bold tracking-[0.22em] text-primary">DIAGNOSTICO NEXT</p>
           <h3 className="mt-1 text-xl font-bold text-foreground">Resumo de integridade</h3>
           <p className="mt-1 max-w-3xl text-sm leading-relaxed text-muted-foreground">
             Leitura local para orientar reparo sem executar comandos pesados.
@@ -642,7 +644,7 @@ function DiagnosticPanel({
           icon={Clock3}
           label="ULTIMA VERIFICACAO"
           value={latestHistory ? formatDate(latestHistory.timestamp) : "Não registrada"}
-          sub={latestHistory?.action ?? "Aguardando diagnóstico NEX"}
+          sub={latestHistory?.action ?? "Aguardando diagnóstico NEXT"}
         />
         <StatusCard
           icon={FileSearch}
@@ -863,7 +865,7 @@ async function createRepairSnapshot({
     plannedActions: [
       {
         id: `repair-${Date.now()}`,
-        engine: "NEX Repair Center",
+        engine: "NEXT Repair Center",
         title,
         description: `${description} Comando preparado: ${command}.`,
         risk,
@@ -877,7 +879,7 @@ async function createRepairSnapshot({
         key: "repairCommand",
         category: "metadata",
         value: command,
-        source: "NEX Repair Center",
+        source: "NEXT Repair Center",
         captured: true,
       },
     ],

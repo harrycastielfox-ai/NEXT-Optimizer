@@ -29,10 +29,10 @@ import { HERMES_SAFE_TEST_MODE } from "@/lib/safe-mode";
 export const Route = createFileRoute("/inicializacao")({
   head: () => ({
     meta: [
-      { title: "NEX Optimizer - Inicialização" },
+      { title: "NEXT Optimizer - Inicialização" },
       {
         name: "description",
-        content: "Leitura local dos programas de inicialização do NEX Optimizer.",
+        content: "Leitura local dos programas de inicialização do NEXT Optimizer.",
       },
     ],
   }),
@@ -123,7 +123,7 @@ function InicializacaoPage() {
       const confirmed = window.confirm(
         `Confirmar ${actionLabel} ${applicableItems.length} item(ns) de inicialização?\n\n` +
           applicableItems.map((item) => `- ${item.name}`).join("\n") +
-          "\n\nO NEX não remove programas, não apaga executáveis e criará snapshot/log/rollback antes da ação.",
+          "\n\nO NEXT não remove programas, não apaga executáveis e criará snapshot/log/rollback antes da ação.",
       );
 
       if (!confirmed) {
@@ -175,7 +175,7 @@ function InicializacaoPage() {
                 Inicialização
               </h1>
               <p className="text-[13px] text-muted-foreground mt-1">
-                Controle seguro dos programas que iniciam com o Windows. O NEX nunca remove
+                Controle seguro dos programas que iniciam com o Windows. O NEXT nunca remove
                 programas nem apaga executáveis.
               </p>
             </div>
@@ -283,7 +283,9 @@ function InicializacaoPage() {
                     <label
                       className="flex items-center"
                       title={
-                        isItemControllable(item) ? "Item controlável pelo NEX." : item.controlReason
+                        isItemControllable(item)
+                          ? "Item controlável pelo NEXT."
+                          : item.controlReason
                       }
                     >
                       <input

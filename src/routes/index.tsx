@@ -52,7 +52,7 @@ import {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "NEX Optimizer — Dashboard" },
+      { title: "NEXT Optimizer — Dashboard" },
       { name: "description", content: "Painel central do PC com coleta local somente leitura." },
     ],
   }),
@@ -120,8 +120,8 @@ function Dashboard() {
       <Sidebar />
 
       <div className="flex min-h-0 flex-1 flex-col min-w-0">
-        <main className="min-h-0 flex-1 overflow-hidden px-4 py-3 sm:px-5 xl:px-8 xl:py-4">
-          <div className="mx-auto grid h-full w-full max-w-[1540px] grid-rows-[auto_auto_auto_auto_auto] overflow-hidden">
+        <main className="min-h-0 flex-1 overflow-y-auto px-4 py-3 sm:px-5 xl:px-8 xl:py-4">
+          <div className="mx-auto grid min-h-full w-full max-w-[1540px] grid-rows-[auto_auto_auto_auto_auto]">
             {/* Header */}
             <div className="mb-3 flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
               <div className="relative min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-card/45 px-4 py-2.5 shadow-[0_14px_42px_-36px_rgba(168,85,247,0.7)] backdrop-blur xl:max-w-[520px]">
@@ -289,7 +289,7 @@ function Dashboard() {
                 />
               </InfoPanel>
 
-              <InfoPanel title="RECOMENDAÇÕES NEX">
+              <InfoPanel title="RECOMENDAÇÕES NEXT">
                 {recommendations.map((recommendation) => {
                   const visual = getRecommendationVisual(recommendation);
                   return (
@@ -372,7 +372,7 @@ function Dashboard() {
             </div>
 
             <p className="mt-2 text-center text-[10px] text-muted-foreground">
-              NEX Optimizer 0.1.0 • Local first • Ações reais somente com confirmação
+              NEXT Optimizer 0.1.0 • Local first • Ações reais somente com confirmação
             </p>
           </div>
         </main>

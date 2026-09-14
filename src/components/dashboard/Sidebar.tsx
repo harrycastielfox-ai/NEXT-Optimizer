@@ -41,7 +41,7 @@ export function Sidebar() {
         const { getCurrentWindow } = await import("@tauri-apps/api/window");
         await getCurrentWindow().minimize();
       } catch (error) {
-        console.warn("Não foi possível minimizar a janela do NEX.", error);
+        console.warn("Não foi possível minimizar a janela do NEXT.", error);
       }
     }
   }, []);
@@ -50,13 +50,13 @@ export function Sidebar() {
     <aside className="sidebar-texture sticky top-0 h-screen w-[230px] 2xl:w-[260px] shrink-0 overflow-hidden flex flex-col px-4 py-5 2xl:px-5 2xl:py-6 border-r border-slate-200/80 dark:border-white/10">
       <button
         type="button"
-        aria-label="Minimizar NEX Optimizer"
+        aria-label="Minimizar NEXT Optimizer"
         title="Minimizar"
         onClick={handleMinimize}
         className="relative z-10 mb-7 flex shrink-0 flex-col items-center justify-center rounded-3xl px-3 py-5 outline-none transition-transform duration-200 hover:scale-[1.015] focus-visible:ring-2 focus-visible:ring-primary/70"
       >
         <span className="text-[44px] font-black leading-none tracking-[0.08em] text-transparent bg-clip-text bg-gradient-to-r from-white via-fuchsia-100 to-primary drop-shadow-[0_0_24px_rgba(168,85,247,0.45)]">
-          NEX
+          NEXT
         </span>
         <span className="mt-2 text-[10px] font-bold uppercase tracking-[0.28em] text-primary/90">
           Optimizer

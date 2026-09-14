@@ -19,6 +19,7 @@ import { applyAdvancedActions } from "@/lib/advanced";
 import { DNS_PROVIDERS, type DnsProviderId, type QuickPrepareReports } from "@/lib/quick-prepare";
 import { HERMES_SAFE_TEST_MODE } from "@/lib/safe-mode";
 import { readSystemBootContext, type SystemBootContext } from "@/lib/system";
+import { getPrepareRebootStatus, hasExecutionIssues } from "@/lib/execution-outcome";
 
 export const Route = createFileRoute("/otimizar")({
   component: OptimizeRoute,
@@ -34,6 +35,10 @@ type QuickPrepareGate = {
   safeMode: boolean;
   bootIdAtCompletion?: string;
   bootedAtAtCompletion?: string;
+  // true when the run that produced this gate had steps marked unavailable/failed - e.g. no
+  // Tauri backend, or a real command that couldn't apply. Lets the UI say so instead of
+  // claiming a clean "Preparação concluída" when some steps didn't actually run.
+  hasIssues?: boolean;
 };
 
 type RestartRecommendation = {
@@ -42,8 +47,6 @@ type RestartRecommendation = {
   completedAt?: string;
   reason: string;
 };
-
-type PrepareRebootStatus = "notPrepared" | "pending" | "confirmed";
 
 function OptimizeRoute() {
   const [isQuickPrepareOpen, setIsQuickPrepareOpen] = useState(false);
@@ -71,18 +74,31 @@ function OptimizeRoute() {
       setDnsProviderId(storedGate.dnsProviderId);
     }
     setRestartRecommendation(readRestartRecommendation());
-    setExecutionCycleReport(readExecutionCycleReport());
+    setExecutionCycleReport(readExecutionCycleReport({ safeMode: HERMES_SAFE_TEST_MODE }));
     void refreshSystemBootContext().then(setSystemBootContext);
   }, []);
 
-  const prepareRebootStatus = getPrepareRebootStatus(quickPrepareGate, systemBootContext);
+  const prepareRebootStatus = getPrepareRebootStatus(
+    quickPrepareGate,
+    systemBootContext,
+    HERMES_SAFE_TEST_MODE,
+  );
   const prepareDone = Boolean(quickPrepareGate);
+  const prepareHasIssues = Boolean(
+    quickPrepareGate &&
+    (quickPrepareGate.hasIssues !== false || quickPrepareGate.safeMode !== HERMES_SAFE_TEST_MODE),
+  );
   const optimizeReady = prepareRebootStatus === "confirmed";
   const optimizeLocked = !quickPrepareGate || !optimizeReady;
-  const optimizeDone = executionCycleReport?.reports.optimize?.summary.completedActions ?? 0;
+  const optimizeReport = executionCycleReport?.reports.optimize;
+  const optimizeDone =
+    optimizeReport && !hasExecutionIssues(optimizeReport)
+      ? optimizeReport.summary.completedActions
+      : 0;
   const centralActionTarget = { value: `${HERMES_ACTION_TARGET} ações` };
   const currentPhaseText = getCurrentPhaseText({
     prepareDone,
+    prepareHasIssues,
     optimizeReady,
     optimizeDone,
     restartRecommendation,
@@ -102,7 +118,8 @@ function OptimizeRoute() {
 
     if (
       !quickPrepareGate ||
-      getPrepareRebootStatus(quickPrepareGate, nextBootContext) !== "confirmed"
+      getPrepareRebootStatus(quickPrepareGate, nextBootContext, HERMES_SAFE_TEST_MODE) !==
+        "confirmed"
     ) {
       return;
     }
@@ -133,11 +150,15 @@ function OptimizeRoute() {
         dryRun: HERMES_SAFE_TEST_MODE,
         actionIds: [provider.actionId],
       });
+      const dnsAction = result.appliedActions.find((action) => action.id === provider.actionId);
+      if (!dnsAction || !["applied", "dryRun"].includes(dnsAction.status)) {
+        throw new Error(dnsAction?.message ?? "O motor não confirmou a aplicação do DNS.");
+      }
       setDnsApplyStatus("done");
       setDnsApplyMessage(
         result.dryRun
           ? `Modo teste: DNS ${provider.label} validado, nada foi alterado de verdade.`
-          : (result.appliedActions[0]?.message ?? `DNS ${provider.label} aplicado.`),
+          : dnsAction.message,
       );
     } catch (nextError) {
       setDnsApplyStatus("error");
@@ -152,21 +173,13 @@ function OptimizeRoute() {
       const nextBootContext = await refreshSystemBootContext();
       setSystemBootContext(nextBootContext);
 
-      if (!nextBootContext) {
-        console.warn("O reinício automático foi bloqueado até o boot atual ser identificado.");
-      } else {
-        const bootContext = nextBootContext;
-        if (!bootContext.available || !bootContext.currentBootId) {
-          console.warn("O reinício automático foi bloqueado até o boot atual ser identificado.");
-        }
-      }
-
       const nextGate: QuickPrepareGate = {
         completedAt: new Date().toISOString(),
         dnsProviderId,
         safeMode: HERMES_SAFE_TEST_MODE,
         bootIdAtCompletion: nextBootContext?.currentBootId,
         bootedAtAtCompletion: nextBootContext?.bootedAt,
+        hasIssues: hasExecutionIssues(executionReport),
       };
       writeQuickPrepareGate(nextGate);
       setQuickPrepareGate(nextGate);
@@ -174,7 +187,9 @@ function OptimizeRoute() {
       const nextRestartRecommendation: RestartRecommendation = {
         phase: "prepare",
         requestedAt: new Date().toISOString(),
-        reason: "Reinicie para finalizar a Preparação e liberar a Otimização.",
+        reason: nextGate.hasIssues
+          ? "Repita a preparação após resolver as pendências."
+          : "Preparação concluída. Reinicie quando estiver pronto.",
       };
       writeRestartRecommendation(nextRestartRecommendation);
       setRestartRecommendation(nextRestartRecommendation);
@@ -182,12 +197,11 @@ function OptimizeRoute() {
       writeExecutionReport(executionReport);
       const nextCycle = buildExecutionCycleReport({
         prepare: executionReport,
-        optimize: executionCycleReport?.reports.optimize,
       });
       writeExecutionCycleReport(nextCycle);
       setExecutionCycleReport(nextCycle);
     },
-    [dnsProviderId, executionCycleReport],
+    [dnsProviderId],
   );
 
   const handleOptimizeCompleted = useCallback(
@@ -196,7 +210,9 @@ function OptimizeRoute() {
         phase: "optimize",
         requestedAt: new Date().toISOString(),
         completedAt: new Date().toISOString(),
-        reason: "Otimização finalizada.",
+        reason: hasExecutionIssues(executionReport)
+          ? "Otimização com pendências. Consulte o relatório."
+          : "Otimização finalizada.",
       };
       writeRestartRecommendation(nextRestartRecommendation);
       setRestartRecommendation(nextRestartRecommendation);
@@ -223,7 +239,7 @@ function OptimizeRoute() {
               <div className="relative flex min-h-[78px] flex-col justify-center">
                 <span className="inline-flex h-5 w-fit items-center gap-1.5 rounded-full border border-purple-300/25 bg-purple-300/10 px-2.5 text-[8px] font-black uppercase tracking-[0.18em] text-purple-300">
                   <Sparkles className="h-3 w-3" />
-                  NEX Performance
+                  NEXT Performance
                 </span>
                 <h1 className="mt-2 bg-gradient-to-r from-white via-fuchsia-100 to-purple-300 bg-clip-text text-[clamp(24px,2vw,31px)] font-black leading-none tracking-normal text-transparent drop-shadow-[0_0_16px_rgba(168,85,247,0.18)]">
                   Preparar e otimizar
@@ -328,8 +344,22 @@ function OptimizeRoute() {
               title="Preparar PC"
               description="Prepara a base do Windows antes da otimização."
               icon={Zap}
-              status={optimizeReady ? "Concluído" : prepareDone ? "Reinicie o PC" : "Pronto"}
-              actionLabel={prepareDone ? "Preparação concluída" : "Iniciar preparação"}
+              status={
+                prepareHasIssues
+                  ? "Com pendências"
+                  : optimizeReady
+                    ? "Concluído"
+                    : prepareDone
+                      ? "Reinicie o PC"
+                      : "Pronto"
+              }
+              actionLabel={
+                prepareDone
+                  ? prepareHasIssues
+                    ? "Repetir preparação"
+                    : "Preparação concluída"
+                  : "Iniciar preparação"
+              }
               items={[
                 "Diagnóstico completo do sistema",
                 "Otimização de rede e DNS:",
@@ -340,8 +370,8 @@ function OptimizeRoute() {
                 DNS_PROVIDERS.find((provider) => provider.id === dnsProviderId)?.label ??
                 "Selecionado"
               }
-              disabled={prepareDone}
-              completed={prepareDone}
+              disabled={prepareDone && !prepareHasIssues}
+              completed={prepareDone && !prepareHasIssues}
               onAction={handlePrepareNow}
               testId="hermes-prepare-start"
             />
@@ -352,12 +382,18 @@ function OptimizeRoute() {
               description="Conclui o plano global após o novo boot."
               icon={Sparkles}
               status={optimizeReady ? "Liberado" : "Bloqueado"}
-              actionLabel={optimizeReady ? "Iniciar otimização" : "Aguardando reinício"}
+              actionLabel={
+                optimizeReady
+                  ? "Iniciar otimização"
+                  : prepareHasIssues
+                    ? "Resolva a preparação"
+                    : "Aguardando preparação e reinício"
+              }
               items={[
                 "Limpeza inteligente e cache",
                 "Inicialização e desempenho global",
                 "Rede e serviços otimizados",
-                "NEX Engine: +100 alterações cirúrgicas",
+                "NEXT Engine: +100 alterações cirúrgicas",
               ]}
               disabled={optimizeLocked}
               locked={optimizeLocked}
@@ -514,11 +550,13 @@ function StepPanel({
 
 function getCurrentPhaseText({
   prepareDone,
+  prepareHasIssues,
   optimizeReady,
   optimizeDone,
   restartRecommendation,
 }: {
   prepareDone: boolean;
+  prepareHasIssues: boolean;
   optimizeReady: boolean;
   optimizeDone: number;
   restartRecommendation: RestartRecommendation | null;
@@ -533,14 +571,18 @@ function getCurrentPhaseText({
   if (optimizeReady) {
     return {
       title: "Botão 2 liberado",
-      description: "A preparação foi concluída em um boot anterior. Você pode finalizar agora.",
+      description: HERMES_SAFE_TEST_MODE
+        ? "Preparação simulada concluída. Você pode simular a segunda etapa sem reiniciar."
+        : "A preparação foi concluída em um boot anterior. Você pode finalizar agora.",
     };
   }
 
   if (prepareDone || restartRecommendation?.phase === "prepare") {
     return {
-      title: "Reinício necessário",
-      description: "Reinicie o computador para liberar a segunda etapa.",
+      title: prepareHasIssues ? "Preparação com pendências" : "Reinício necessário",
+      description: prepareHasIssues
+        ? "Confira o relatório e repita a preparação. A segunda etapa permanece bloqueada."
+        : "Reinicie o computador para liberar a segunda etapa.",
     };
   }
 
@@ -610,31 +652,4 @@ async function refreshSystemBootContext(): Promise<SystemBootContext | null> {
   } catch {
     return null;
   }
-}
-
-function getPrepareRebootStatus(
-  gate: QuickPrepareGate | null,
-  bootContext: SystemBootContext | null,
-): PrepareRebootStatus {
-  if (!gate) {
-    return "notPrepared";
-  }
-
-  if (!gate.bootIdAtCompletion && !gate.bootedAtAtCompletion) {
-    return "pending";
-  }
-
-  if (!bootContext) {
-    return "pending";
-  }
-
-  if (gate.bootIdAtCompletion && bootContext.currentBootId !== gate.bootIdAtCompletion) {
-    return "confirmed";
-  }
-
-  if (gate.bootedAtAtCompletion && bootContext.bootedAt !== gate.bootedAtAtCompletion) {
-    return "confirmed";
-  }
-
-  return "pending";
 }

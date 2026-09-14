@@ -223,7 +223,7 @@ async function runPlanPhase(): Promise<OptimizeAllPhaseResult> {
     reports: { plan, advisor, diagnostic },
     outputs: [
       `${plan.summary.totalStages} etapa(s) do orquestrador local`,
-      `${advisor.recommendations.length} recomendação(ões) da NEX IA`,
+      `${advisor.recommendations.length} recomendação(ões) da NEXT Insight`,
       `Saúde atual: ${Math.round(diagnostic.healthScore)}/100`,
     ],
   };
@@ -631,7 +631,7 @@ function buildGameTargets(report: GamerReport): OptimizeAllGameTarget[] {
   targets.push({
     id: "preset-fate-trigger-ue5",
     label: "Fate Trigger",
-    detail: "Prioridade NEX: Fate Trigger via Steam em Unreal Engine 5.",
+    detail: "Prioridade NEXT: Fate Trigger via Steam em Unreal Engine 5.",
     source: "preset",
     confidence: "high",
     executable: "FateTrigger-Win64-Shipping.exe",

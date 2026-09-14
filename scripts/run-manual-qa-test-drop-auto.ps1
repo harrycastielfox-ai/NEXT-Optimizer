@@ -243,9 +243,9 @@ try {
   }
 
   Invoke-LoggedProcess `
-    -Name "03-run-extracted-runner-quick-pass" `
+    -Name "03-run-extracted-runner-pending-evidence" `
     -FilePath "powershell.exe" `
-    -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $runner.FullName, "-QuickPassAll") `
+    -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $runner.FullName, "-InitializeOnly") `
     -Environment $runnerEnvironment | Out-Null
 
   $generatedEvidence = Get-ChildItem -LiteralPath $extractRoot -Recurse -Directory -Filter "HermesQA" |

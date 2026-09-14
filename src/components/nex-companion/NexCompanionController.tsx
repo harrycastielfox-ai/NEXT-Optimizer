@@ -58,7 +58,7 @@ export function NexCompanionController() {
         const optimization = readNexOptimizationState();
         if (
           optimization.isRunning &&
-          !window.confirm("Uma otimização está em andamento. Deseja encerrar o NEX mesmo assim?")
+          !window.confirm("Uma otimização está em andamento. Deseja encerrar o NEXT mesmo assim?")
         ) {
           return;
         }

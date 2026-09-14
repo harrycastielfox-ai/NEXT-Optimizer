@@ -432,7 +432,7 @@ export async function verifyGamerDependencyInstallers(): Promise<GamerDependency
 
 export async function openGamerDependencyCacheDir(): Promise<string> {
   if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) {
-    throw new Error("Cache de instaladores disponivel apenas no aplicativo NEX.");
+    throw new Error("Cache de instaladores disponivel apenas no aplicativo NEXT.");
   }
 
   const { invoke } = await import("@tauri-apps/api/core");
@@ -441,7 +441,7 @@ export async function openGamerDependencyCacheDir(): Promise<string> {
 
 export async function downloadOfficialGamerDependencyInstallers(): Promise<GamerDependencyDownloadResult> {
   if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) {
-    throw new Error("Download oficial disponivel apenas no aplicativo NEX.");
+    throw new Error("Download oficial disponivel apenas no aplicativo NEXT.");
   }
 
   const { invoke } = await import("@tauri-apps/api/core");
@@ -455,7 +455,7 @@ export async function downloadOfficialGamerDependencyInstallers(): Promise<Gamer
 
 export async function auditOfficialGamerDependencyManifest(): Promise<GamerDependencyManifestAuditResult> {
   if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) {
-    throw new Error("Auditoria oficial disponivel apenas no aplicativo NEX.");
+    throw new Error("Auditoria oficial disponivel apenas no aplicativo NEXT.");
   }
 
   const { invoke } = await import("@tauri-apps/api/core");
@@ -471,7 +471,7 @@ export async function installVerifiedGamerDependencies(
   request: GamerDependencyInstallRequest,
 ): Promise<GamerDependencyInstallResult> {
   if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) {
-    throw new Error("Instalador gamer disponivel apenas no aplicativo NEX.");
+    throw new Error("Instalador gamer disponivel apenas no aplicativo NEXT.");
   }
 
   const { invoke } = await import("@tauri-apps/api/core");

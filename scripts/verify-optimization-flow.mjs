@@ -22,6 +22,7 @@ const files = {
   gamerDependencies: readFileSync(join(root, "src", "lib", "gamer-dependencies.ts"), "utf8"),
   quickPrepare: readFileSync(join(root, "src", "lib", "quick-prepare.ts"), "utf8"),
   executionReport: readFileSync(join(root, "src", "lib", "execution-report.ts"), "utf8"),
+  executionOutcome: readFileSync(join(root, "src", "lib", "execution-outcome.ts"), "utf8"),
   gamerDependencyEngine: readFileSync(
     join(root, "src-tauri", "src", "gamer_dependencies.rs"),
     "utf8",
@@ -93,22 +94,35 @@ const checks = [
       !files.otimizarRoute.includes("Iniciar mesmo assim"),
   },
   {
-    name: "Fase 1 agenda reinicio automatico real em cinco segundos",
+    name: "Reinicio real exige clique, confirmacao e permite cancelar a contagem de 60 segundos",
     ok:
-      files.restartPrompt.includes("autoRestartRequested") &&
-      files.restartPrompt.includes("void handleRestart()") &&
-      files.restartPrompt.includes("delaySeconds: 5") &&
-      files.restartPrompt.includes("HERMES_SAFE_TEST_MODE || autoRestartRequested.current") &&
+      !files.restartPrompt.includes("autoRestartRequested") &&
+      !files.restartPrompt.includes("void handleRestart()") &&
+      files.restartPrompt.includes("onClick={handleRestart}") &&
+      files.restartPrompt.includes("window.confirm(") &&
+      files.restartPrompt.indexOf("window.confirm(") <
+        files.restartPrompt.indexOf("await requestSystemRestart(") &&
+      files.restartPrompt.includes("delaySeconds: 60") &&
+      files.restartPrompt.includes("onClick={handleCancelRestart}") &&
+      files.restartPrompt.includes("dryRun: HERMES_SAFE_TEST_MODE") &&
       files.systemBackend.includes("clamp(5, 300)"),
   },
   {
-    name: "Fase 1 persiste o boot antes de iniciar o reinicio automatico",
+    name: "Fase 1 persiste resultado antes de concluir e bloqueia fase real sem boot confirmado",
     ok:
       files.quickModal.includes("await onCompleted?.(nextReports, executionReport)") &&
       files.quickModal.indexOf("await onCompleted?.(nextReports, executionReport)") <
         files.quickModal.indexOf('setRunStatus("completed")') &&
-      files.otimizarRoute.includes("if (!bootContext.available || !bootContext.currentBootId)") &&
-      files.otimizarRoute.includes("O reinício automático foi bloqueado"),
+      files.otimizarRoute.includes("hasIssues: hasExecutionIssues(executionReport)") &&
+      files.otimizarRoute.includes("getPrepareRebootStatus(") &&
+      files.executionOutcome.includes("gate.hasIssues !== false") &&
+      files.executionOutcome.includes("gate.safeMode !== safeMode") &&
+      files.executionOutcome.includes(
+        'if (!bootContext?.available || !bootContext.isWindows) return "pending"',
+      ) &&
+      files.executionOutcome.includes(
+        'bootContext.currentBootId !== gate.bootIdAtCompletion ? "confirmed" : "pending"',
+      ),
   },
   {
     name: "Botao 2 usa wrappers Optimize Now para Clean e Advanced",
@@ -147,8 +161,8 @@ const checks = [
   },
   {
     name: "Catalogo avancado aceita arrays nulos retornados pelo Windows",
-    ok: files.advancedEngine.includes(
-      '#[serde(default, deserialize_with = "deserialize_nullable_string_vec")]\n    defender_exclusion_paths',
+    ok: /#\[serde\(default, deserialize_with = "deserialize_nullable_string_vec"\)\]\s+defender_exclusion_paths/.test(
+      files.advancedEngine,
     ),
   },
   {

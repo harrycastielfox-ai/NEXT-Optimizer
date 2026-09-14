@@ -16,7 +16,7 @@ import { requestSystemRestart, type SystemRestartResult } from "@/lib/system";
 export const Route = createFileRoute("/anti-cheat")({
   head: () => ({
     meta: [
-      { title: "NEX Optimizer - Anti-Cheat" },
+      { title: "NEXT Optimizer - Anti-Cheat" },
       { name: "description", content: "Compatibilidade local com anti-cheats modernos." },
     ],
   }),
@@ -220,7 +220,7 @@ function AntiCheatCard({
       </div>
 
       <div className="mt-5 rounded-xl border border-primary/15 bg-primary/5 px-4 py-3">
-        <p className="text-[10px] font-bold tracking-[0.18em] text-primary">NEX AI</p>
+        <p className="text-[10px] font-bold tracking-[0.18em] text-primary">NEXT Insight</p>
         <p className="mt-1 text-[13px] text-muted-foreground">{report.summary}</p>
       </div>
 
@@ -236,7 +236,7 @@ function AntiCheatCard({
             Guia seguro
           </p>
           <p className="mt-1 text-[12px] text-muted-foreground">
-            O NEX mostra o caminho recomendado sem alterar BIOS, drivers, jogos ou configurações do
+            O NEXT mostra o caminho recomendado sem alterar BIOS, drivers, jogos ou configurações do
             Windows.
           </p>
           <div className="mt-3 space-y-2">
@@ -379,7 +379,7 @@ function AntiCheatActivationModal({
 
         {activation.result?.requiresAdmin && (
           <div className="mt-4 rounded-xl border border-warning/30 bg-warning/10 px-3 py-2 text-xs font-bold text-warning">
-            Abra o NEX como administrador para aplicar esta funcao.
+            Abra o NEXT como administrador para aplicar esta funcao.
           </div>
         )}
 

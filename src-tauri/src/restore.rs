@@ -275,6 +275,24 @@ pub fn restore_create_snapshot(
     request: Option<RestoreCreateSnapshotRequest>,
 ) -> Result<RestoreSnapshot, String> {
     let request = request.unwrap_or_default();
+    validate_renderer_snapshot(&request)?;
+    create_snapshot(app, Some(request))
+}
+
+fn validate_renderer_snapshot(request: &RestoreCreateSnapshotRequest) -> Result<(), String> {
+    if request.rollback_manifest.as_ref().is_some_and(|manifest| !manifest.is_empty()) {
+        return Err("Manifestos de restauracao executaveis so podem ser capturados pelos motores nativos. A interface pode salvar apenas registros informativos.".into());
+    }
+    Ok(())
+}
+
+// Engines capture the real previous state themselves. Keeping this separate
+// from IPC prevents an unlicensed renderer forging a rollback as a new write.
+pub(crate) fn create_snapshot(
+    app: AppHandle,
+    request: Option<RestoreCreateSnapshotRequest>,
+) -> Result<RestoreSnapshot, String> {
+    let request = request.unwrap_or_default();
     let paths = restore_paths(&app)?;
     let mut history = read_snapshot_history(&paths.snapshots);
     let timestamp = now_timestamp();
@@ -1280,7 +1298,9 @@ fn validate_file_backup_action(action: &RestoreRollbackAction) -> RestoreActionR
 fn is_allowed_defender_exclusion_path(path: &str) -> bool {
     let normalized = path.trim().replace('/', "\\").to_ascii_lowercase();
     let bytes = normalized.as_bytes();
-    let allowed_suffix = normalized.ends_with("\\nex optimizer.exe")
+    let allowed_suffix = normalized.ends_with("\\next optimizer.exe")
+        || normalized.ends_with("\\next-optimizer.exe")
+        || normalized.ends_with("\\nex optimizer.exe")
         || normalized.ends_with("\\nex-optimizer.exe")
         || normalized.ends_with("\\hermes-optimizer.exe");
     allowed_suffix && bytes.get(1) == Some(&b':') && bytes.get(2) == Some(&b'\\')
@@ -1833,6 +1853,25 @@ fn now_nanos() -> u128 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn renderer_cannot_supply_executable_rollback_manifest() {
+        let request = RestoreCreateSnapshotRequest {
+            rollback_manifest: Some(vec![RestoreRollbackAction {
+                id: "forged".into(),
+                action_type: RestoreRollbackActionType::RestorePowerPlan,
+                target: "power-plan".into(),
+                description: "Forged renderer input".into(),
+                previous_value: Some("scheme_min".into()),
+                backup_path: None,
+                command_preview: None,
+                status: RestoreRollbackActionStatus::Pending,
+            }]),
+            ..RestoreCreateSnapshotRequest::default()
+        };
+        assert!(validate_renderer_snapshot(&request).is_err());
+        assert!(validate_renderer_snapshot(&RestoreCreateSnapshotRequest::default()).is_ok());
+    }
 
     #[test]
     fn restores_clean_quarantine_file_backup_in_real_mode() {

@@ -83,10 +83,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "NEX Optimizer" },
+      { title: "NEXT Optimizer" },
       { name: "description", content: "Painel central do PC com coleta local somente leitura." },
-      { name: "author", content: "NEX Optimizer" },
-      { property: "og:title", content: "NEX Optimizer" },
+      { name: "author", content: "NEXT Optimizer" },
+      { property: "og:title", content: "NEXT Optimizer" },
       {
         property: "og:description",
         content: "Painel central do PC com coleta local somente leitura.",
@@ -94,7 +94,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@NEXOptimizer" },
-      { name: "twitter:title", content: "NEX Optimizer" },
+      { name: "twitter:title", content: "NEXT Optimizer" },
       {
         name: "twitter:description",
         content: "Painel central do PC com coleta local somente leitura.",
@@ -141,7 +141,8 @@ function RootComponent() {
   );
 }
 
-const PUBLIC_LICENSE_ROUTES = new Set(["/admin/licencas"]);
+// Recovery must remain reachable when a subscription expires or the network is offline.
+const PUBLIC_LICENSE_ROUTES = new Set(["/admin/licencas", "/seguranca"]);
 
 function RootSurface() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });

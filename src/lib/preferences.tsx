@@ -225,7 +225,7 @@ const translations: Record<LanguagePreference, Partial<Record<TranslationKey, st
       "Restaurar preferências visuais e administrativas padrão? Nenhuma engine será alterada.",
     "settings.updates.title": "Atualizações",
     "settings.updates.description":
-      "Estrutura visual para verificação, download automático e canais futuros. Nenhuma atualização real é executada.",
+      "Consulte as versões publicadas no GitHub. Este build usa atualização manual; não baixa nem instala versões automaticamente.",
     "settings.updates.autoCheck.title": "Verificar atualizações automaticamente",
     "settings.updates.autoCheck.description": "Preparado para fase futura de updates locais.",
     "settings.updates.autoDownload.title": "Baixar atualizações automaticamente",
@@ -241,7 +241,7 @@ const translations: Record<LanguagePreference, Partial<Record<TranslationKey, st
     "settings.appearance.accent": "Cor principal",
     "settings.appearance.note.title": "Tema aplicado localmente",
     "settings.appearance.note.text":
-      "O NEX muda apenas a aparência do app. Tema do Windows e navegadores nunca são alterados.",
+      "O NEXT muda apenas a aparência do app. Tema do Windows e navegadores nunca são alterados.",
     "settings.notifications.title": "Notificações",
     "settings.notifications.description":
       "Preferências locais para avisos futuros. Nenhum serviço residente é criado.",
@@ -272,12 +272,12 @@ const translations: Record<LanguagePreference, Partial<Record<TranslationKey, st
       "O acesso é vinculado ao e-mail e ao primeiro computador ativado. Códigos só podem ser resgatados uma vez.",
     "settings.privacy.title": "Privacidade",
     "settings.privacy.description":
-      "Compromissos locais do NEX e base visual para preferências futuras.",
-    "settings.privacy.local": "NEX funciona localmente.",
+      "Compromissos locais do NEXT e base visual para preferências futuras.",
+    "settings.privacy.local": "NEXT funciona localmente.",
     "settings.privacy.noTelemetry": "Sem telemetria obrigatória.",
-    "settings.privacy.noUpload": "Sem envio automático de dados.",
+    "settings.privacy.noUpload": "Diagnósticos e arquivos pessoais permanecem neste computador.",
     "settings.privacy.noCloud":
-      "Sem upload obrigatório de diagnósticos; somente conta e licença usam o servidor.",
+      "A validação online da licença usa e-mail, credencial de acesso e identificador protegido do dispositivo.",
     "settings.privacy.share.title": "Compartilhar dados anônimos",
     "settings.privacy.share.description":
       "Opção futura. Desativada por padrão e sem qualquer coleta nesta fase.",
@@ -291,8 +291,8 @@ const translations: Record<LanguagePreference, Partial<Record<TranslationKey, st
     "settings.option.beta": "Beta",
     "settings.option.future": "Futuro",
     "settings.option.intermediate": "Intermediário",
-    "settings.option.blue": "Roxo NEX",
-    "settings.option.gold": "Branco NEX",
+    "settings.option.blue": "Roxo NEXT",
+    "settings.option.gold": "Branco NEXT",
     "settings.option.auto": "Automático",
     "settings.option.portuguese": "Português",
     "settings.option.english": "English",
@@ -336,7 +336,7 @@ const translations: Record<LanguagePreference, Partial<Record<TranslationKey, st
       "Restore visual and administrative preferences to default? No engine will be changed.",
     "settings.updates.title": "Updates",
     "settings.updates.description":
-      "Visual structure for checks, automatic download, and future channels. No real update runs.",
+      "View published versions on GitHub. This build uses manual updates; it never downloads or installs updates automatically.",
     "settings.updates.autoCheck.title": "Check for updates automatically",
     "settings.updates.autoCheck.description": "Prepared for a future local updates phase.",
     "settings.updates.autoDownload.title": "Download updates automatically",
@@ -352,7 +352,7 @@ const translations: Record<LanguagePreference, Partial<Record<TranslationKey, st
     "settings.appearance.accent": "Main color",
     "settings.appearance.note.title": "Theme applied locally",
     "settings.appearance.note.text":
-      "NEX changes only the app appearance. Windows and browser themes are never changed.",
+      "NEXT changes only the app appearance. Windows and browser themes are never changed.",
     "settings.notifications.title": "Notifications",
     "settings.notifications.description":
       "Local preferences for future alerts. No resident service is created.",
@@ -383,12 +383,12 @@ const translations: Record<LanguagePreference, Partial<Record<TranslationKey, st
       "Access is bound to the email and first activated computer. Codes can only be redeemed once.",
     "settings.privacy.title": "Privacy",
     "settings.privacy.description":
-      "NEX local commitments and a visual base for future preferences.",
-    "settings.privacy.local": "NEX runs locally.",
+      "NEXT local commitments and a visual base for future preferences.",
+    "settings.privacy.local": "NEXT runs locally.",
     "settings.privacy.noTelemetry": "No mandatory telemetry.",
-    "settings.privacy.noUpload": "No automatic data upload.",
+    "settings.privacy.noUpload": "Diagnostics and personal files stay on this computer.",
     "settings.privacy.noCloud":
-      "No mandatory diagnostic uploads; only account and license use the server.",
+      "Online license validation uses your email, access credential and protected device identifier.",
     "settings.privacy.share.title": "Share anonymous data",
     "settings.privacy.share.description":
       "Future option. Disabled by default with no collection in this phase.",
@@ -402,8 +402,8 @@ const translations: Record<LanguagePreference, Partial<Record<TranslationKey, st
     "settings.option.beta": "Beta",
     "settings.option.future": "Future",
     "settings.option.intermediate": "Intermediate",
-    "settings.option.blue": "NEX Purple",
-    "settings.option.gold": "NEX White",
+    "settings.option.blue": "NEXT Purple",
+    "settings.option.gold": "NEXT White",
     "settings.option.auto": "Automatic",
     "settings.option.portuguese": "Português",
     "settings.option.english": "English",
@@ -448,7 +448,7 @@ const translations: Record<LanguagePreference, Partial<Record<TranslationKey, st
       "¿Restaurar preferencias visuales y administrativas al predeterminado? Ningún motor será alterado.",
     "settings.updates.title": "Actualizaciones",
     "settings.updates.description":
-      "Estructura visual para verificacion, descarga automática y canales futuros. No se ejecuta ninguna actualizacion real.",
+      "Consulta las versiones publicadas en GitHub. Esta versión usa actualizaciones manuales; no descarga ni instala actualizaciones automáticamente.",
     "settings.updates.autoCheck.title": "Verificar actualizaciones automaticamente",
     "settings.updates.autoCheck.description":
       "Preparado para una fase futura de actualizaciones locales.",
@@ -465,7 +465,7 @@ const translations: Record<LanguagePreference, Partial<Record<TranslationKey, st
     "settings.appearance.accent": "Color principal",
     "settings.appearance.note.title": "Tema aplicado localmente",
     "settings.appearance.note.text":
-      "NEX cambia solo la apariencia de la app. El tema de Windows y navegadores nunca se altera.",
+      "NEXT cambia solo la apariencia de la app. El tema de Windows y navegadores nunca se altera.",
     "settings.notifications.title": "Notificaciones",
     "settings.notifications.description":
       "Preferencias locales para avisos futuros. No se crea servicio residente.",
@@ -497,12 +497,13 @@ const translations: Record<LanguagePreference, Partial<Record<TranslationKey, st
       "El acceso se vincula al e-mail y al primer equipo activado. Cada código solo puede canjearse una vez.",
     "settings.privacy.title": "Privacidad",
     "settings.privacy.description":
-      "Compromisos locales de NEX y base visual para preferencias futuras.",
-    "settings.privacy.local": "NEX funciona localmente.",
+      "Compromisos locales de NEXT y base visual para preferencias futuras.",
+    "settings.privacy.local": "NEXT funciona localmente.",
     "settings.privacy.noTelemetry": "Sin telemetria obligatoria.",
-    "settings.privacy.noUpload": "Sin envio automático de datos.",
+    "settings.privacy.noUpload":
+      "Los diagnósticos y archivos personales permanecen en este equipo.",
     "settings.privacy.noCloud":
-      "Sin carga obligatoria de diagnósticos; solo la cuenta y la licencia usan el servidor.",
+      "La validación online de la licencia usa el correo, la credencial de acceso y el identificador protegido del dispositivo.",
     "settings.privacy.share.title": "Compartir datos anónimos",
     "settings.privacy.share.description":
       "Opción futura. Desactivada por defecto y sin recopilación en esta fase.",
@@ -516,8 +517,8 @@ const translations: Record<LanguagePreference, Partial<Record<TranslationKey, st
     "settings.option.beta": "Beta",
     "settings.option.future": "Futuro",
     "settings.option.intermediate": "Intermedio",
-    "settings.option.blue": "Roxo NEX",
-    "settings.option.gold": "Blanco NEX",
+    "settings.option.blue": "Roxo NEXT",
+    "settings.option.gold": "Blanco NEXT",
     "settings.option.auto": "Automático",
     "settings.option.portuguese": "Português",
     "settings.option.english": "English",
@@ -560,7 +561,7 @@ const translations: Record<LanguagePreference, Partial<Record<TranslationKey, st
     "settings.confirmReset": "外観と管理設定を標準に戻しますか？エンジン設定は変更されません。",
     "settings.updates.title": "更新",
     "settings.updates.description":
-      "確認、自動ダウンロード、今後のチャンネル用の表示構造です。実際の更新は実行されません。",
+      "公開済みバージョンはGitHubで確認できます。このビルドは手動更新です。自動ダウンロードやインストールは行いません。",
     "settings.updates.autoCheck.title": "更新を自動で確認",
     "settings.updates.autoCheck.description": "今後のローカル更新フェーズ用に準備済みです。",
     "settings.updates.autoDownload.title": "更新を自動でダウンロード",
@@ -576,7 +577,7 @@ const translations: Record<LanguagePreference, Partial<Record<TranslationKey, st
     "settings.appearance.accent": "メインカラー",
     "settings.appearance.note.title": "テーマはローカル適用",
     "settings.appearance.note.text":
-      "NEXはアプリの外観だけを変更します。Windowsやブラウザのテーマは変更しません。",
+      "NEXTはアプリの外観だけを変更します。Windowsやブラウザのテーマは変更しません。",
     "settings.notifications.title": "通知",
     "settings.notifications.description":
       "今後の通知用ローカル設定です。常駐サービスは作成されません。",
@@ -606,12 +607,12 @@ const translations: Record<LanguagePreference, Partial<Record<TranslationKey, st
     "settings.license.note.text":
       "アクセスはメールと最初に有効化した PC に関連付けられます。コードは一度だけ利用できます。",
     "settings.privacy.title": "プライバシー",
-    "settings.privacy.description": "NEXのローカル方針と今後のプライバシー設定のベースです。",
-    "settings.privacy.local": "NEXはローカルで動作します。",
+    "settings.privacy.description": "NEXTのローカル方針と今後のプライバシー設定のベースです。",
+    "settings.privacy.local": "NEXTはローカルで動作します。",
     "settings.privacy.noTelemetry": "必須テレメトリなし。",
-    "settings.privacy.noUpload": "データの自動送信なし。",
+    "settings.privacy.noUpload": "診断情報と個人ファイルはこのコンピューターに保存されます。",
     "settings.privacy.noCloud":
-      "診断情報の必須アップロードはありません。アカウントとライセンスのみサーバーを使用します。",
+      "オンラインのライセンス確認では、メール、アクセス資格情報、保護されたデバイス識別子を使用します。",
     "settings.privacy.share.title": "匿名データを共有",
     "settings.privacy.share.description":
       "今後のオプションです。標準では無効で、この段階では収集はありません。",
@@ -625,8 +626,8 @@ const translations: Record<LanguagePreference, Partial<Record<TranslationKey, st
     "settings.option.beta": "ベータ",
     "settings.option.future": "今後対応",
     "settings.option.intermediate": "中級",
-    "settings.option.blue": "NEXパープル",
-    "settings.option.gold": "NEXホワイト",
+    "settings.option.blue": "NEXTパープル",
+    "settings.option.gold": "NEXTホワイト",
     "settings.option.auto": "自動",
     "settings.option.portuguese": "ポルトガル語",
     "settings.option.english": "英語",
@@ -748,7 +749,7 @@ export function readPreferences(): HermesAdminPreferences {
     const parsed = JSON.parse(raw) as Partial<HermesAdminPreferences>;
     return mergePreferences(parsed);
   } catch (error) {
-    console.warn("Falha ao ler preferencias locais do NEX.", error);
+    console.warn("Falha ao ler preferencias locais do NEXT.", error);
     return {
       ...defaultPreferences,
       updatedAt: new Date().toISOString(),
